@@ -308,3 +308,8 @@ Exe/Mono/etc/mono/2.0/Browsers/Compat.browser
 *.xml
 *.exe
 *.info
+
+Library/metadata
+Library/ShaderCache
+Temp
+Exe

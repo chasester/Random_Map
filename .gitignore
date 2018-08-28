@@ -300,3 +300,11 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+*.dll
+Exe/TilemapsYT_Data/Resources/unity default resources
+*.aspx
+Exe/Mono/etc/mono/2.0/Browsers/Compat.browser
+*.config
+*.xml
+*.exe
+*.info

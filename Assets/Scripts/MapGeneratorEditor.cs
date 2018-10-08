@@ -14,6 +14,13 @@ public class MapGeneratorEditor : Editor
         if (DrawDefaultInspector() && mapgen.Preview) mapgen.GenerateMap();
         if (GUILayout.Button("Generate"))
             mapgen.GenerateMap();
+        if(GUILayout.Button("Randomize"))
+        {
+            mapgen.Seed    = Random.Range(99999, -99999);
+            mapgen.Variant = Random.Range(99999, -99999);
+            mapgen.MapSeed = Random.Range(99999, -99999);
+            mapgen.GenerateMap();
+        }
     }
 
 }

@@ -10,7 +10,7 @@ public class CameraControl : MonoBehaviour {
     [Range(1.01f, 100f)]
     public float BoostSpeed = 2f;
     private Transform trans;
-    private Camera camera;
+    public Camera camera;
     // Use this for initialization
     void Start()
     {

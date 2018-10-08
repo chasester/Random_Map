@@ -1,10 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class MapGenerator : MonoBehaviour
 {
-    [Range(-9999,9999)]
+    [Range(-9999, 9999)]
     public int Seed = 100;
     [Range(-9999, 9999)]
     public int Variant = 100;
@@ -12,50 +11,63 @@ public class MapGenerator : MonoBehaviour
     public int MapSeed;
 
     public Rect Bounds = new Rect(0, 0, 200, 200);
-    [Range(0.01f,50.0f)]
+    [Range(0.001f,1.0f)]
+    public float WaterHeight = 0.2f;
+    [Range(1, 50)]
+    public int CoastCleanIrrations = 10;
+    [Range(0.01f, 50.0f)]
     public float CellPercentage = 3f; //percent of the map that cells contain on average. The closer to 100 The smaller the cells and the larger the detail (and the longer the time to process)
-    [Range(0,10)]
+    [Range(0, 10)]
     public int LLOYD_Irrations = 2;
-    [Range(0.0001f, 15f)]
+    [Range(0, 10)]
+    public int PATEL_Irrations = 4;
     
+    [Range(0.0f, 1.0f)]
+    public float PictureWeight;
+    [Range(0.0f, 1.0f)]
+    public float PerlinWeight;
+    [Range(0.0f, 1.0f)]
+    public float CenterWeight;
+    
+    public Vector2Int NumHighPoints = new Vector2Int(1,3);
+    public Vector2Int MaxHighPointHeight = new Vector2Int(500, 2500);
+    public Vector2Int MaxHighPointWidth = new Vector2Int(500, 2500);
+    public Vector2 MaxElevation = new Vector2(0.6f, 1.0f);
+    public Vector2 ElevationDropOff = new Vector2(0.8f, 1.8f);
+
+
+    [Range(0.0001f, 15f)]
     public float MinDistance = 5f;
+    [Range(0.0001f, 5f)]
+    public float CoastalRoughness = 1.0f;
+    [Range(-1, 5)]
+    public int NormalizationCyles = 3;
     public List<Texture2D> MapTextures;
-   
+
     public bool Preview = true;
     public bool ShowEdges = true;
     public bool ShowCenters = true;
     public bool ShowCorners = false;
     
-
     public void Awake() //call the map when the game starts.
     {
         GenerateMap();
     }
     public void GenerateMap()
     {
-        List<Cell> cells = new List<Cell>(); List<Edge> edges = new List<Edge>() ; List<Corner> corners = new List<Corner>();
-
-        Random.InitState(Seed); //set up random so we can save the seed back so we always can get back to were we where
+        List<Cell> cells = new List<Cell>(); List<Edge> edges = new List<Edge>(); List<Corner> corners = new List<Corner>();
+        //set up random so we can save the seed back so we always can get back to were we where
         Mathf.Clamp(CellPercentage, 0.001f, 0.9f); //cap this at 90% cuz otherwise there wont be any map
+        Random.InitState(Variant);
+        List<Vector2> points = generaterandompoints((uint)Mathf.RoundToInt((CellPercentage * 0.001f) * (Bounds.width * Bounds.height)), Bounds); //maybe add a random here to make it a lil more crazy
 
-        List<Vector2> points = generaterandompoints((uint)Mathf.RoundToInt((CellPercentage *0.001f)* (Bounds.width * Bounds.height)), Bounds); //maybe add a random here to make it a lil more crazy
-        
-        improverandompoints(ref points, LLOYD_Irrations, MinDistance, Bounds, ref cells, ref edges, ref corners);
+        Random.InitState(Seed);
+        improverandompoints(ref points, LLOYD_Irrations, PATEL_Irrations, MinDistance, Bounds, ref cells, ref edges, ref corners);
 
         //Divide Land and water, then define ocean from lake, then assign coast, then assign elevation to all land modules (looking at neighbors to level out posiblities)
         //List<Corner> landcorners, watercorners;
-        //Color[] maptexture = readymaptexture(MapTextures, Bounds);
-        //assigncornerelevation(ref corners, Bounds, maptexture,Variant);
-        //assignlandandwater(corners,ref landcorners, ref watercorners); //assign water and land then assign coast and lake and ocean
-        //Texture2d maptexture;
-        //maptexture = MapTextures[Random.Range(0, MapTextures.Count)];
-        //if (!maptexture) return; //maybe instantiate an error here
-        //assignelevation(landcorners, watercorners, );
-        //assignmoisture(landcorners, watercorners);
-
-
-
-
+        Color[] maptexture = readymaptexture(MapTextures, Bounds);
+        assigncornerelevation(ref cells, ref corners, Bounds, maptexture, Variant);
         //renderer;
         Color[,] displaymap = drawvoronoi(cells, edges, corners, Bounds);
         //do disown then clear
@@ -74,21 +86,47 @@ public class MapGenerator : MonoBehaviour
 
         Texture2D maptex = new Texture2D(mapTextures[mapid].width, mapTextures[mapid].height);
         maptex.SetPixels(mapTextures[mapid].GetPixels());
-        maptex.Resize((int)bounds.width, (int)bounds.height);
+        maptex.Apply();
+        //maptex.Resize((int)bounds.width, (int)bounds.height); resizing will nullify all pixles
         return maptex.GetPixels();
     }
 
-    private void assigncornerelevation(ref List<Corner> corners, Rect bounds, Color[] tex, int perlinseed)
+    private void assigncornerelevation(ref List<Cell> cells, ref List<Corner> corners, Rect bounds, Color[] tex, int perlinseed)
     {
-        Corner q, s; Vector2 center = bounds.center;
-        List<Corner> LandCorners = new List<Corner>(), LakeCorners = new List<Corner>(), OceanCorners = new List<Corner>(), neighbors; //waterCorners will only hold water that could be ocean or lakes
+        Corner q; Vector2 center = bounds.center;
+        List<Corner> LandCorners = new List<Corner>(),//list of all the land
+            LakeCorners = new List<Corner>(), //list of all the lowest land we will later make this lake (in phase 1 this is used to help build the ocean then all the remaining points are put back into the land corners) in Phase water sheding we wiull use this to make starting points for the lakes and then build rivers out of these resivors
+            OceanCorners = new List<Corner>(), //list of all the ocean corners
+            CoastCorners = new List<Corner>(), //list of all the coastal corners, these corners are also part of the land corners. This will help build our islands and help create our cool coast line using the coastal cleaning algorithm
+            HighCorners = new List<Corner>(), //list of all the highest points on the map (this is where water shading will happen from.
+            neighbors; //used a few times as a place holder
         Random.State prerandom = Random.state;
-        Vector2 pos; float maxdist = Vector2.Distance(center, bounds.min);
+        Vector2 pos; /*float maxdist = Vector2.Distance(center, bounds.min);*/
         float width = bounds.width;
         float[,] perlinheightmap = PerlinGenerator.GenerateNoise(bounds, 0.1f, (uint)perlinseed);
-        float[,] perlinmoisturemap = PerlinGenerator.GenerateNoise(bounds, 0.1f, (uint)perlinseed+1);
+        float[,] perlinmoisturemap = PerlinGenerator.GenerateNoise(bounds, 0.1f, (uint)perlinseed + 1);
+
+        float t = Mathf.Max(PictureWeight + CenterWeight + PerlinWeight, 0.0001f); //so we dont divide by 0;
+        PictureWeight /= t; CenterWeight /= t; PerlinWeight /= t;
+
+        #region Phase 1: Land Building
+        List<Highpoint> HighPoints = new List<Highpoint>();
+        int num = (int)Random.Range(Mathf.Min(NumHighPoints.x, NumHighPoints.y), Mathf.Max(NumHighPoints.x, NumHighPoints.y));
+        for (int i = 0; i < num; i++)
+        {
+            float w = Random.Range((MaxHighPointHeight.x), (MaxHighPointHeight.y)),
+                  z = Random.Range((MaxHighPointWidth.x), (MaxHighPointWidth.y)),
+                  x = Random.Range(bounds.xMin + (bounds.width * 0.1f) + (0.1f * z), bounds.xMax - (bounds.width * 0.1f) - (0.5f * z)),
+                  y = Random.Range(bounds.yMin + (bounds.height * 0.1f) + (0.1f * w), bounds.yMax - (bounds.height * 0.1f) - (0.5f * w)),
+                  v = Random.Range(MaxElevation.x, MaxElevation.y),
+                  u = Random.Range(ElevationDropOff.x, ElevationDropOff.y);
+            Highpoint h = new Highpoint(x,y,z,w,v,u);
+            HighPoints.Add(h);
+        }
+
+
         for (int i = 0; i < corners.Count; i++)
-       {
+        {
 
             q = corners[i];
             pos = q.getposition();
@@ -97,54 +135,225 @@ public class MapGenerator : MonoBehaviour
             {
                 //handel edge of map;
                 neighbors = q.GetNeighbors();
-                for (int j = 0; j < neighbors.Count; j++) neighbors[j].SetTerrianProperties(0.0f, 1.0f, TerrianType.TERRIAN_OCEAN);
                 q.SetTerrianProperties(0.0f, 1.0f, TerrianType.TERRIAN_OCEAN);
                 OceanCorners.Add(q);
                 continue; //when we are done we wont need to do anything else here
             }
-            continue;
+
             //so we are gonna look at the perlinmap giving a 20% bias to that then look at our maptexture and give a 50% bias to that then finally to help the rivers run down hill we will add a small 30% bias based on where an object is from the center of the map
-            float texelevation = tex[(int)(width * pos.y + pos.x)].g;
-            float elevation = (perlinheightmap[(int)pos.x, (int)pos.y] * 0.01f) + (Random.Range(texelevation*0.5f,texelevation ) * 0.5f) + (((0.5f - Vector2.Distance(pos,center)/maxdist)) * 0.3f);
-            if(elevation < 0.2f)
+            int texpixel = (int)(width * pos.y + pos.x);
+            float texelevation = 0.0f;//tex[texpixel].g;
+            float elevation = (Random.Range(0.0f, 1.0f) * PerlinWeight) + (Random.Range(texelevation, texelevation) * PictureWeight) + (calculatefromhighpoints(HighPoints, q.getposition()) * CenterWeight);
+            if (elevation < WaterHeight)
             {
+                neighbors = q.GetNeighbors();
+                int chance = 0;
+                for (int j = 0; j < neighbors.Count; j++) if (neighbors[j].terrian == TerrianType.TERRIAN_LAND) chance += 3; else if (neighbors[j].terrian == TerrianType.TERRIAN_LAKE) chance--; else if (neighbors[j].terrian == TerrianType.TERRIAN_OCEAN) chance++; //add a chance that land will clump a lil
+
                 //this will be water
-                q.SetTerrianProperties(0.0f, 1.0f, TerrianType.TERRIAN_LAKE); //we may change this to give it a lil evelation varience but for now lets leave it alone
-                LakeCorners.Add(q); //we dont know if this is a lake or not but we will determind that after we calculate all the corners
-                continue; //we are done now 
+                if (Random.Range(0, 100 * chance) * 0.01f < 1.5f) //maybe bring this back 
+                {
+                    q.SetTerrianProperties(0.0f, 1.0f, TerrianType.TERRIAN_LAKE); //we may change this to give it a lil evelation varience but for now lets leave it alone
+                    LakeCorners.Add(q); //we dont know if this is a lake or not but we will determind that after we calculate all the corners
+                    continue; //we are done now 
+                }
+            }else if(elevation > 0.9f)
+            {
+                //q.SetTerrianProperties(0.0f, 1.0f, TerrianType.TERRIAN_LAKE);
+                //continue;
             }
             //so this must be land so lets calculate some pregenerated moisture ideals
-            float moisture = (perlinmoisturemap[(int)pos.x, (int)pos.y] * 0.2f) + (Random.Range(0.0f, tex[(int)(width * pos.y + pos.x)].r))* 0.5f + ((1.0f - (Mathf.Abs(pos.y - center.y) / bounds.width)) * 0.3f);
+            float moisture = 0.0f;//(perlinmoisturemap[(int)pos.x, (int)pos.y] * 0.2f) + (Random.Range(0.0f, tex[(int)(width * pos.y + pos.x)].r)) * 0.5f + ((1.0f - (Mathf.Abs(pos.y - center.y) / bounds.width)) * 0.3f);
             q.SetTerrianProperties(elevation, moisture, TerrianType.TERRIAN_LAND);
-         }
+        }
+        #endregion
+        #region Phase 2: Coast Cleanup
         //phase 2: we need to now find our map edge corners (conviently placed in the oceans terrain) then cycle through there neighbors till we get to corners marked as land. We will change each of these corners from lake to ocean and move them from the Lake list to the ocean list.
         //this will be similar to a b* algorithm were we will follow a branch til we have reach a dead end then we will go to the next branch
         List<Corner> que = new List<Corner>(OceanCorners.Count); //see up this cuz we are gonna copy it in a sec
         que.AddRange(OceanCorners);
+        CollectOceanCorners(ref que, ref OceanCorners, ref LakeCorners, ref CoastCorners);
+        for (int i = 0; i < CoastCleanIrrations; i++)
+        {
+            que = CleanCoastCorners(ref OceanCorners, ref CoastCorners);
+            if (que.Count == 0) { break; }
+            CollectOceanCorners(ref que, ref OceanCorners, ref LakeCorners, ref CoastCorners);
+        }
+        //remove the lake corners and calculate them later during water sheding
+        for (int i = 0; i < LakeCorners.Count; i++) LakeCorners[i].terrian = TerrianType.TERRIAN_LAND;
+
+        LandCorners.AddRange(LakeCorners);
+        LakeCorners.Clear(); //well use thes for water sheding
+        #endregion
+        #region Phase 3: Normalization
+        //Phase 3: We want to run a normalization
+        for (int i = 0; i < cells.Count; i++) //first cycle assign the average for all the corners to the center(aka the cell)
+        {
+            Cell c = cells[i];
+            List<Corner> cr = c.GetCorners();
+            float eavg = 0, etotal = 0;
+            bool isocean = true;
+            for (int j = 0; j < cr.Count; j++)
+            {
+                if (cr[j].terrian == TerrianType.TERRIAN_OCEAN) continue;
+                if (cr[j].terrian != TerrianType.TERRIAN_COAST) isocean = false;
+                if (!c.coast) c.coast = cr[j].terrian == TerrianType.TERRIAN_COAST; //does it contain a coast
+
+                eavg += cr[j].elevation;//*Random.Range(0.6f, 1.2f)*(cr[j].terrian == TerrianType.TERRIAN_COAST ? 0.5f:1.0f);
+                etotal += 1.0f;//*Random.Range(0.8f, 1.2f);
+            }
+            if (isocean)
+            {
+                c.ocean = true;//is 100% ocean;
+                c.elevation = 1.0f;
+                c.moisture = 1.0f;
+            }
+            eavg = eavg / etotal;
+            c.elevation = eavg;
+        }
+        #region Old method
+        //cycles 2: take the cell average from the closest cell and from the farther and farther cells and weight them to assign normalize elevation for all corners
+        //for (int i = 0; i < cells.Count; i++)
+        //{
+        //    if (cells[i].ocean) continue; //we dont need to do anything if this is coast
+        //    Cell c = cells[i];
+        //    List<Corner> cr = c.GetCorners();
+        //    float eavg = 0.0f, etotal = 0.0f;
+        //    int irrations = 0;
+
+        //    for (int j = 1; j < irrations + 1; j++) { float p = (1 / (Mathf.Pow(2, (j)))); eavg += getcellelevationaverage(j, c) * p; etotal += p; }
+        //    if (etotal < 1) { eavg = c.elevation; }
+        //    else eavg /= etotal;
+
+        //    for (int j = 0; j < cr.Count; j++)
+        //    {
+        //        if (cr[j].terrian == TerrianType.TERRIAN_OCEAN) continue;
+        //        float ce = cr[j].elevation * 0.3f + c.elevation * 0.3f + eavg * 0.4f;
+        //        if (ce > cr[j].elevation) cr[j].elevation = ce;
+        //        //else cr[j].elevation = 0.0f;
+
+
+        //    }
+        //}
+        #endregion
+        if (NormalizationCyles > -1) for (int i = 0; i < LandCorners.Count; i++)
+        {
+           
+            List<Cell> cn = LandCorners[i].GetCellNeighbors();
+            float elvg = 0.000f, elnum = 0.0f;
+            for (int j = 0; j < cn.Count; j++)
+            {
+                if (cn[j].ocean) continue;
+                for (int k = 1; k < NormalizationCyles + 1; k++) { float p = (1 / (Mathf.Pow(2, (k)))); elvg += getcellelevationaverage(k, cn[j])* p; elnum += p; }
+                elvg += cn[j].elevation; elnum++;
+            }
+            elvg += LandCorners[i].elevation; elnum++;
+            //if (elnum == 0) continue; the above makes this worthless;
+            elvg /= elnum;
+            if (elvg > LandCorners[i].elevation) LandCorners[i].elevation = elvg;
+        }
+        #endregion
+        
+        //Phase 6: Do water sheding starting at the highest points and Dropping the water down letting it go down the slops. We want to favor the side of the mountain that the wind would blow against (according to the sphereical rotation)
+        //cyle 01: drop water from Highpoints (if no high points then do some guess work to make high points [well have to do this at a later point])
+        //cycle 02: check all corners to see if they recieved moisture. If not drop from each of these After wards.(most likely these will be islands so all the water should filter to the ocean.)
+
+        //Phase 7: Normalize Moisture And create outlets of lakes to Ocean
+
+        //Phase 8: 
+
+    }
+
+
+    private float getcellelevationaverage(int irrations, Cell c)
+    {
+        float el = 0.0f, elnum = 0.0f;
+        List<Cell> neigh = c.GetNeighbors();
+        irrations--;
+        for (int i = 0; i < neigh.Count; i++)
+        {
+            if (c.ocean) continue;
+            el += neigh[i].elevation;
+            elnum += 1;
+            if (irrations > 0) { float a = getcellelevationaverage(irrations, neigh[i]); if (!float.IsNaN(a)) el += a; elnum += 1; }
+        }
+        el /= elnum;
+        return el;
+    }
+
+    private float calculatefromhighpoints(List<Highpoint> highPoints, Vector2 point)
+    {
+        int index = -1;
+        float leastdist = float.MaxValue;
+        float dist;
+        for(int i = 0; i < highPoints.Count;i++ )
+        {
+            Vector2 pos = highPoints[i].pos;
+            dist = Vector2.Distance(pos, point);
+            if ( dist < leastdist && Random.Range(0, 5) >= CoastalRoughness)
+            {
+                leastdist = dist;  
+                index = i;
+            }
+        }
+        if(index < 0) return 0.0f;
+        float avg = 0.0f;
+        for (int i = 0; i < Random.Range(1, 1); i++)
+        {
+            Vector2 df = new Vector2((highPoints[index].size.x * Random.Range(0.7f, 1.4f)), (highPoints[index].size.y * Random.Range(0.7f, 1.4f)));
+            Vector2 ds = (point - highPoints[index].pos), norm = ds; norm.Normalize(); norm *= df;
+            float mdist = Vector2.Distance(norm, ds);
+            avg = (avg + (1 - Mathf.Clamp01(Mathf.Pow(Mathf.Abs(leastdist / mdist), highPoints[index].dispation))) * highPoints[index].elevation);
+            if (i > 0) avg /= 2;
+        }
+        return avg;
+        //leastdist = ((point.x - highPoints[index].x) -radx + (point.y - highPoints[index].y) -rady)/2;
+        //return Mathf.Lerp(1.0f, 0.0f, leastdist/(highPoints[index].z + highPoints[index].w)/2);
+    }
+
+    private List<Corner> CleanCoastCorners(ref List<Corner> OceanCorners, ref List<Corner> CoastCorners)
+    {
+        List<Corner> que = new List<Corner>(), neighbors;
+        Corner q;
+        for (int i = 0; i < CoastCorners.Count; i++) // get the ones that are near the ocean and add them to the ocen list;
+        {
+            int chance = 0;
+            q = CoastCorners[i];
+            neighbors = q.GetNeighbors();
+            for (int j = 0; j < neighbors.Count; j++) if (neighbors[j].terrian == TerrianType.TERRIAN_LAKE) chance++;
+            if (chance == 0) continue; 
+            q.terrian = TerrianType.TERRIAN_OCEAN;
+            que.Add(q); //add it to the list to be re calculated
+            OceanCorners.Add(q); //add it to the ocean tiles
+            //add it to a new que so we can recheck if we want to do this. maybe make it random weither these become fresh or salt water
+            CoastCorners.RemoveAt(i);
+        }
+        return que;
+    }
+    private void CollectOceanCorners(ref List<Corner> que, ref List<Corner> OceanCorners, ref List<Corner> LakeCorners, ref List<Corner> CoastCorners)
+    {
+        List<Corner> neighbors;
+        Corner q, s;
         while (que.Count > 0) //we are just gonna set up a simple que algorithm each cycle we will remove an item from the que until all items are gone and we have our map
         {
             q = que[0];
-            if (q.isEdge(bounds)) { que.RemoveAt(0); continue; } //above we already added all of the map edges to be part of the ocean group so we dont need to recycle these ones
+            //if (q.isEdge(bounds)) { que.RemoveAt(0); continue; } //above we already added all of the map edges to be part of the ocean group so we dont need to recycle these ones
             neighbors = q.GetNeighbors();
             for (int i = 0; i < neighbors.Count; i++)
             {
                 s = neighbors[i];
-                if (s.terrian != TerrianType.TERRIAN_LAKE) continue; //we only need to correct the terrian that should be ocean not lake
+                if (s.terrian == TerrianType.TERRIAN_OCEAN) continue;
+                if (s.terrian == TerrianType.TERRIAN_LAND) { CoastCorners.Add(s); s.terrian = TerrianType.TERRIAN_COAST; continue; }
                 s.terrian = TerrianType.TERRIAN_OCEAN;
+
                 que.Add(s); //we add this to the que so that we can check its neighbors
                 LakeCorners.Remove(s); //we want to make sure to keep the lake list clean so it only contains the lake elements. This item is an ocean element os we dotn want it here
                 OceanCorners.Add(s);
             }
             que.RemoveAt(0); //once we checked all our neighbors then we are done and we can move on
         }
-
+        que.Clear();//should be empty but just in case
     }
-
-    private void assignlandandwater(List<Corner> corners, ref List<Corner> landcorners, ref List<Corner> watercorners)
-    {
-        
-    }
-
     private List<Vector2> generaterandompoints(uint NumPoints, Rect bounds)
     {
         List<Vector2> points = new List<Vector2>();
@@ -167,9 +376,9 @@ public class MapGenerator : MonoBehaviour
         float dy = height / (float)length;
         for (int u = 0; u <= intLength; u++)
         {
-            if (xPix < Bounds.width && yPix < Bounds.height && xPix >= 0 && yPix >= 0)
+            //if (xPix < Bounds.width && yPix < Bounds.height && xPix >= 0 && yPix >= 0)
                 displaymap[(int)xPix, (int)yPix] = new Color(0.2f, 0.2f, 0.2f);
-            else failed = true;
+            //else failed = true;
             xPix += dx;
             yPix += dy;
         }
@@ -179,19 +388,22 @@ public class MapGenerator : MonoBehaviour
     {
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
 
-        if (ShowCenters) for (int i = 0; i < cells.Count; i++) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.5f, 1f, 0.8f);
+        if (ShowCenters) for (int i = 0; i < cells.Count; i++)
+            {
+                if(cells[i].coast) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.8f, 0.5f + (cells[i].elevation), 0.07f);
+                else if (cells[i].ocean) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0, 0, 1.0f);
+                //else if (cells[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.2f, 1.0f - Mathf.Clamp((cells[i].elevation), 0.0f, 1.0f), 1.0f - Mathf.Clamp((cells[i].elevation), 0.0f, 1.0f));
+                else displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color((cells[i].elevation - 0.7f) * 3.34f, cells[i].elevation + 0.1f, (cells[i].elevation - 0.7f) * 3.34f);
+            }
         if (ShowEdges) for (int i = 0; i < edges.Count; i++) drawline(ref displaymap, edges[i].getto(), edges[i].getfrom());
-        if (ShowCorners) for (int i = 0; i < corners.Count; i++) if (corners[i].terrian != TerrianType.TERRIAN_NULL) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] =
-                      new Color(corners[i].terrian == TerrianType.TERRIAN_LAKE ? 1.0f : 0.0f, corners[i].terrian == TerrianType.TERRIAN_LAND ? 1.0f : 0.0f, corners[i].terrian == TerrianType.TERRIAN_OCEAN ? 1.0f : 0.0f);
-        //List<Edge> borders;
-        //for (int i = 0; i < cells.Count; i++)
-        //{
-        //    borders = cells[i].GetBorders();
-        //    displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(borders.Count*0.1f, 1f, 0.8f);
 
-        //    for (int j = 0; j < borders.Count; j++)
-        //        drawline(ref displaymap, borders[j].getto(), borders[j].getfrom());
-        //}
+        if (ShowCorners) for (int i = 0; i < corners.Count; i++)
+            {
+                if (corners[i].terrian == TerrianType.TERRIAN_LAND) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color((corners[i].elevation - 0.7f) * 3.34f, corners[i].elevation + 0.1f, (corners[i].elevation - 0.7f) * 3.34f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_OCEAN) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, 0, 1.0f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.2f, 1.0f - Mathf.Clamp((corners[i].elevation), 0.0f, 1.0f), 1.0f - Mathf.Clamp((corners[i].elevation), 0.0f, 1.0f));
+                else if (corners[i].terrian == TerrianType.TERRIAN_COAST) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.8f, 0.5f + (corners[i].elevation), 0.07f);
+            }
         return displaymap;
     }
     private List<Cell> createcells(List<Voronoi2.GraphEdge> oedges, List<Vector2> points, ref List<Edge> edges, ref List<Corner> corners)
@@ -205,6 +417,7 @@ public class MapGenerator : MonoBehaviour
             e = new Edge(new Vector2((float)gedge.x1, (float)gedge.y1), new Vector2((float)gedge.x2, (float)gedge.y2), c1, c2, i, ref corners);
             edges.Add(e);
             if (gedge.site1 == gedge.site2) Debug.Log("dub site");
+            
             //for (int j = 0; j < edges.Count; j++) if (edges[j].isequal(e)) Debug.Log("DUBLICATE EDGE");  //check to see if we have doubles in this array           
         }
 
@@ -227,12 +440,13 @@ public class MapGenerator : MonoBehaviour
         //Debug.Log(a);
         return cells;
     }
-    private void improverandompoints(ref List<Vector2> points, int lloyd_irrations, float mindistance, Rect bounds, ref List<Cell> cells, ref List<Edge> edges, ref List<Corner> corners)
+    private void improverandompoints(ref List<Vector2> points, int lloyd_irrations, float patel_irrations, float mindistance, Rect bounds, ref List<Cell> cells, ref List<Edge> edges, ref List<Corner> corners)
     {
         { //create a blank scope so we can reuse local varible names
             cells.Clear(); edges.Clear(); corners.Clear();//make sure our Returning lists are empty
             Vector2 p = new Vector2();  List<Cell> region = new List<Cell>(); Voronoi2.Voronoi v = new Voronoi2.Voronoi(0.002);
             List<Voronoi2.GraphEdge> ge;
+            bruteforceremove(ref points, ref cells, mindistance);
             for (int i = 0; i < lloyd_irrations; i++)
             {
                 ge = v.generateVoronoi(points, bounds);
@@ -260,15 +474,14 @@ public class MapGenerator : MonoBehaviour
                
             }
             v.reset();
+            
             cells = createcells(v.generateVoronoi(points, bounds), points, ref edges, ref corners);//this will create everything the last time so we get the result we want.
-            //bruteforceremove(ref points, ref cells, mindistance);
         }
 
         //phase two
         Vector2[] newcorners = new Vector2[corners.Count];
-        Corner q; Vector2 p1; List<Cell> neighbors;
-        bool failed = false;
-        for (int k = 0; k < 1; k++)
+        Corner q; Vector2 p1; List<Cell> cellneighbors;
+        for (int k = 0; k < patel_irrations; k++)   
         {
             for (int i = 0; i < corners.Count; i++)
             {
@@ -276,11 +489,11 @@ public class MapGenerator : MonoBehaviour
                 if (q.isEdge(bounds)) { newcorners[i] = q.getposition(); continue; }
 
                 p1 = new Vector2();
-                neighbors = q.GetCellNeighbors();
-                if (neighbors.Count <= 0) { newcorners[i] = q.getposition(); Debug.Log("neighbor not assigned"); continue; }
+                cellneighbors = q.GetCellNeighbors();
+                if (cellneighbors.Count <= 0) { newcorners[i] = q.getposition(); Debug.Log("cell neighbor not assigned"); continue; }
 
-                for (int j = 0; j < neighbors.Count; j++) p1 += neighbors[j].getpos();
-                p1 /= neighbors.Count;
+                for (int j = 0; j < cellneighbors.Count; j++) p1 += cellneighbors[j].getpos();
+                p1 /= cellneighbors.Count;
                 newcorners[i] = p1;
             }
             for (int i = 0; i < newcorners.GetLength(0); i++) corners[i].SetPosition(newcorners[i]); // now we assign the points
@@ -317,22 +530,25 @@ public class MapGenerator : MonoBehaviour
 
         int id = -1;
         public bool water = false, ocean = false, coast = false, border = false;
-        float elevation = 0f, moisture = 0f;
         Biome biome = Biome.NONE;
 
         List<Edge> borders;
         //List<Midpoint> midpts; //this is the middle of the edge. We will use this mainly for relaxing the edges and making noisy lines and a few other small things
         List<Cell> neighbors; // cell you share one edge with
         List<Corner> corners;
+        public float elevation { get; set; }
+        public float moisture { get; set; }
 
         public Cell(Vector2 position, int index=-1)
         {
             center = position;
             borders = new List<Edge>();
+            corners = new List<Corner>();
             //midpts = new List<Midpoint>();
             neighbors = new List<Cell>();
             id = index;
         }
+        public List<Corner> GetCorners() { return corners; }
         public List<Cell> GetNeighbors() { return neighbors; }
         public Vector2 getpos() { return center; }
         public void RemoveNeighbors()
@@ -368,6 +584,15 @@ public class MapGenerator : MonoBehaviour
             neighbors.Add(neighbor);
             //for (int i = 0; i < borders.Count; i++) if (edge.isequal(edge)) return false; //so we dont add the same edge twice (idk how we could);
             borders.Add(edge);
+            Corner[] cr = edge.GetCorners();
+            bool flag = false;
+            for (int i = 0; i < 2; i++) {
+                for (int j = 0; j < corners.Count; j++)
+                    if (corners[j] == cr[i])
+                        flag = true;
+                if (!flag) corners.Add(cr[i]);
+                flag = false;
+            }
             return true;
         }
         public void Disown() //only used to destroy the entire cell list
@@ -383,7 +608,7 @@ public class MapGenerator : MonoBehaviour
     {
         //Vector2 from, to; //from is always the lowest Y then lowest X
         Cell c1, c2; //belongs to 2 points on either side to of it;
-
+        List<Edge> neighbors;
         int id;
         Corner[] ends;
         Midpoint m;
@@ -403,17 +628,17 @@ public class MapGenerator : MonoBehaviour
                 e = borders[i]; t2 = e.getto(); f2 = e.getfrom();
                 if (ends[0] == null) //only run this one time after a true is fired
                 {
-                    if (t1 == t2) { ends[0] = e.GetCorners()[0]; ends[0].AddEdge(this); }
-                    else if (t1 == f2) { ends[0] = e.GetCorners()[1]; ends[0].AddEdge(this); }
-                    Debug.Log("tried to set id 0");
+                    if (t1 == t2) { ends[0] = e.GetCorners()[0]; ends[0].AddEdge(this); continue; }
+                    else if (t1 == f2) { ends[0] = e.GetCorners()[1]; ends[0].AddEdge(this); continue; }
+                    
                 }
                 if (ends[1] == null) //same as above
                 {
-                    if (f1 == t2) { ends[1] = e.GetCorners()[0]; ends[1].AddEdge(this); }
-                    else if (f1 == f2) { ends[1] = e.GetCorners()[1]; ends[1].AddEdge(this); }
-                    Debug.Log("tried to set id 1");
+                    if (f1 == t2) { ends[1] = e.GetCorners()[0]; ends[1].AddEdge(this); continue; }
+                    else if (f1 == f2) { ends[1] = e.GetCorners()[1]; ends[1].AddEdge(this); continue; }
+                    
                 }
-                if (ends[0] != null && ends[1] != null) { return; } //we found a corner for both ends so we are done here
+                if (ends[0] != null && ends[1] != null) { break; } //we found a corner for both ends so we are done here
             }
             if (ends[0] == null) { ends[0] = new Corner(t1, corners.Count,this); corners.Add(ends[0]); }
             if (ends[1] == null) { ends[1] = new Corner(f1, corners.Count, this); corners.Add(ends[1]); }
@@ -530,14 +755,14 @@ public class MapGenerator : MonoBehaviour
         {
             this.edges.Add(e);
             Cell[] cells = e.getcells();
-            
-            
-            for(int i = 0; i < touches.Count; i++)
-                for (int j = 0; j < 2; j++)
-                {
-                    if (touches[i].getpos() == cells[j].getpos()) continue;
-                    touches.Add(cells[j]);
-                }
+            bool flag = false;
+            for (int j = 0; j < 2; j++)
+            {
+                for (int i = 0; i < touches.Count; i++)
+                    if (touches[i] == cells[j]) { flag = true; break; }
+                if(!flag)touches.Add(cells[j]);
+                flag = false;
+            }
             return this;
         }
         public void gatherneighbors()
@@ -545,18 +770,16 @@ public class MapGenerator : MonoBehaviour
             for (int j = 0; j < edges.Count; j++)
             {
                 Corner[] c = edges[j].GetCorners();
-                if (c[0] == null && c[1] == null) Debug.Log("cells not registared yet");
                 for (int i = 0; i < 2; i++)
                 {
                     if (c[i] == null)
                     {
-                        Debug.Log("point was null" + i); continue;
+                         continue;
                     }
-                    if (c[i].getposition() == this.getposition()) { Debug.Log("position was equal: " + i); continue; }
+                    if (c[i].getposition() == this.getposition()) { continue; }
                     neighbors.Add(c[i]);
                 }
             }
-            Debug.Log(edges.Count);
         }
         public void SetPosition(Vector2 pos) { position = pos; }
         public void SetTerrianProperties(float elevation, float moisture, TerrianType type)
@@ -597,5 +820,19 @@ public class MapGenerator : MonoBehaviour
         public float landchance = 0.0f;
     }
 
+    class Highpoint
+    {
+        public Highpoint(float x, float y, float sizex, float sizey, float elev, float dispat)
+        {
+            pos = new Vector2(x, y);
+            size = new Vector2(sizex, sizey);
+            elevation = Mathf.Clamp(elev, 0.0f, 1.0f);
+            dispation = dispat;
+        }
+        public Vector2 pos { get; set; } //point on which the highpoint sits
+        public Vector2 size { get; set; } //size of the elipse shape
+        public float elevation { get; set; } //the highest value that a corner can recieve (say it shares the position of the highpoint)
+        public float dispation { get; set; } //how fast does the highpoint decay (elevation)^dispation
+    }
 
 }

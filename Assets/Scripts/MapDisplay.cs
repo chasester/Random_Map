@@ -39,4 +39,9 @@ public class MapDisplay : MonoBehaviour {
         TextureRenerer.sharedMaterial.mainTexture = texture;
         TextureRenerer.transform.localScale = new Vector3(width, height, 1);
     }
+    public void DrawColorMap(Texture2D tex)
+    {
+        TextureRenerer.sharedMaterial.mainTexture = tex;
+        TextureRenerer.transform.localScale = new Vector3(tex.width, tex.height, 1);
+    }
 }

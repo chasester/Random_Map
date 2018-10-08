@@ -213,16 +213,17 @@ MonoBehaviour:
   Speed: 2
   ZoomSpeed: 1
   BoostSpeed: 2
---- !u!1 &884417386
+  camera: {fileID: 0}
+--- !u!1 &1286694061
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 884417389}
-  - component: {fileID: 884417388}
-  - component: {fileID: 884417387}
+  - component: {fileID: 1286694064}
+  - component: {fileID: 1286694063}
+  - component: {fileID: 1286694062}
   m_Layer: 0
   m_Name: Quad
   m_TagString: Untagged
@@ -230,12 +231,12 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!23 &884417387
+--- !u!23 &1286694062
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 884417386}
+  m_GameObject: {fileID: 1286694061}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -265,22 +266,22 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
---- !u!33 &884417388
+--- !u!33 &1286694063
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 884417386}
+  m_GameObject: {fileID: 1286694061}
   m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &884417389
+--- !u!4 &1286694064
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 884417386}
+  m_GameObject: {fileID: 1286694061}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 100, z: 1}
+  m_LocalPosition: {x: -88.29, y: 36.19, z: 0.6424844}
+  m_LocalScale: {x: 1000, y: 1000, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
@@ -313,7 +314,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dd666d2e895e844cbc18707bc5f847f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TextureRenerer: {fileID: 884417387}
+  TextureRenerer: {fileID: 1286694062}
 --- !u!114 &1533795990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -325,22 +326,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e64c6579d193395499f3a3feda056284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Seed: -7183
-  Variant: 100
-  MapSeed: 0
+  Seed: 24914
+  Variant: 80532
+  MapSeed: 97471
   Bounds:
     serializedVersion: 2
     x: 0
     y: 0
-    width: 100
-    height: 100
-  CellPercentage: 10.5
-  LLOYD_Irrations: 0
-  MinDistance: 0.4
+    width: 1000
+    height: 1000
+  WaterHeight: 0.33
+  CoastCleanIrrations: 13
+  CellPercentage: 27.1
+  LLOYD_Irrations: 10
+  PATEL_Irrations: 10
+  PictureWeight: 0
+  PerlinWeight: 0.3126873
+  CenterWeight: 0.6873127
+  NumHighPoints: {x: 20, y: 20}
+  MaxHighPointHeight: {x: 200, y: 200}
+  MaxHighPointWidth: {x: 200, y: 400}
+  MaxElevation: {x: 0.7, y: 1}
+  ElevationDropOff: {x: 0.6, y: 1.2}
+  MinDistance: 4
+  CoastalRoughness: 0.99
+  NormalizationCyles: 3
   MapTextures:
   - {fileID: 2800000, guid: e3c33cbecc4151a4ea40f5c5a60d8574, type: 3}
   Preview: 0
-  ShowEdges: 1
+  ShowEdges: 0
   ShowCenters: 1
   ShowCorners: 1
 --- !u!4 &1533795991

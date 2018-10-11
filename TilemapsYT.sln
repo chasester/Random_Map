@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TilemapsYT", "Assembly-CSharp.csproj", "{74C35C19-BEF9-D512-DBFE-C6869652EC1D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{74C35C19-BEF9-D512-DBFE-C6869652EC1D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TilemapsYT", "Assembly-CSharp-Editor.csproj", "{3F02C486-7F7A-F07C-A61D-2A9A2C980647}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "Assembly-CSharp-Editor.csproj", "{3F02C486-7F7A-F07C-A61D-2A9A2C980647}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

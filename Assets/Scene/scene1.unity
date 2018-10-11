@@ -213,7 +213,8 @@ MonoBehaviour:
   Speed: 2
   ZoomSpeed: 1
   BoostSpeed: 2
-  camera: {fileID: 0}
+  trans: {fileID: 0}
+  camera: {fileID: 58619887}
 --- !u!1 &1286694061
 GameObject:
   m_ObjectHideFlags: 0
@@ -280,7 +281,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1286694061}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -88.29, y: 36.19, z: 0.6424844}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1000, y: 1000, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -326,9 +327,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e64c6579d193395499f3a3feda056284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Seed: 24914
-  Variant: 80532
-  MapSeed: 97471
+  Seed: -23644
+  Variant: 74872
+  MapSeed: -82297
   Bounds:
     serializedVersion: 2
     x: 0
@@ -336,25 +337,21 @@ MonoBehaviour:
     width: 1000
     height: 1000
   WaterHeight: 0.33
-  CoastCleanIrrations: 13
+  CoastCleanIrrations: 10
   CellPercentage: 27.1
   LLOYD_Irrations: 10
   PATEL_Irrations: 10
-  PictureWeight: 0
-  PerlinWeight: 0.3126873
-  CenterWeight: 0.6873127
+  PerlinWeight: 0.3
+  CenterWeight: 0.7
   NumHighPoints: {x: 20, y: 20}
-  MaxHighPointHeight: {x: 200, y: 200}
-  MaxHighPointWidth: {x: 200, y: 400}
-  MaxElevation: {x: 0.7, y: 1}
-  ElevationDropOff: {x: 0.6, y: 1.2}
-  MinDistance: 4
-  CoastalRoughness: 0.99
+  MaxHighPointHeight: {x: 150, y: 400}
+  MaxHighPointWidth: {x: 10, y: 150}
+  MaxElevation: {x: 1.4, y: 1.8}
+  ElevationDropOff: {x: 0.78, y: 0.89}
+  MinDistance: 7
+  CoastalRoughness: 1.02
   NormalizationCyles: 3
-  MapTextures:
-  - {fileID: 2800000, guid: e3c33cbecc4151a4ea40f5c5a60d8574, type: 3}
-  Preview: 0
-  ShowEdges: 0
+  ShowEdges: 1
   ShowCenters: 1
   ShowCorners: 1
 --- !u!4 &1533795991

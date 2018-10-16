@@ -29,7 +29,9 @@ public class MapGenerator : MonoBehaviour
     [Range(-1, 5)]
     public int NormalizationCyles = 3;
     [Range(0.0f, 1.0f)]
-    public float LakeMoisture = 0.1f;
+    public float LakeMoisture = 0.8f;
+    [Range(0.00001f, 0.2f)]
+    public float MoistureThreshold = 0.01f;
 
 
     [Range(0, 10)]
@@ -182,6 +184,8 @@ public class MapGenerator : MonoBehaviour
                 //so this must be land so lets calculate some pregenerated moisture ideals
                 float moisture = 0.0f;//(perlinmoisturemap[(int)pos.x, (int)pos.y] * 0.2f) + (Random.Range(0.0f, tex[(int)(width * pos.y + pos.x)].r)) * 0.5f + ((1.0f - (Mathf.Abs(pos.y - center.y) / bounds.width)) * 0.3f);
                 q.SetTerrianProperties(elevation, moisture, TerrianType.TERRIAN_LAND);
+                LandCorners.Add(q);
+
             }
         }
         #endregion
@@ -282,17 +286,19 @@ public class MapGenerator : MonoBehaviour
         {
             //Phase 6: Do water sheding starting at the highest points and Dropping the water down letting it go down the slops. We want to favor the side of the mountain that the wind would blow against (according to the sphereical rotation)
             //cyle 01: drop water from Highpoints (if no high points then do some guess work to make high points [well have to do this at a later point])
-            List<int> Waypoints = new List<int>(corners.Count);
-            for (int i = 0; i < corners.Count; i++) Waypoints.Add(-1);
+            //List<int> Waypoints = new List<int>(corners.Count);
+            //for (int i = 0; i < corners.Count; i++) Waypoints.Add(-1);
             
             Corner c, cn; List<Corner> neigh;
-            List<Corner> waycorners = new List<Corner>();
+            //List<Corner> waycorners = new List<Corner>();
             List<Cell> cneigh;
             Cell wc;
             List<Cell> LakeCell = new List<Cell>();
+            float rainpercent; // random rainfall for this region
 
             for (int i = 0; i < LandCorners.Count; i++)
             {
+                rainpercent = Random.Range(0, 200)/100;
                 wc = null;
                 c = LandCorners[i];
                 for (int k = 0; k < 1000; k++)
@@ -300,11 +306,12 @@ public class MapGenerator : MonoBehaviour
                     if(c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if(cneigh[j].ocean) break; } break; }
                     neigh = c.GetNeighbors();
                     cn = neigh[0];
+                    if (Random.Range(0, 100) < 100) c.moisture += MoistureThreshold*rainpercent;
                     //if (Waypoints[cn.id] != -1) { wc = cells[Waypoints[cn.id]]; break; }
 
                     for (int j = 1; j < neigh.Count; j++) //find the lowest elevation
-                        if (Waypoints[neigh[j].id] != -1) { wc = cells[Waypoints[neigh[j].id]]; break; }
-                        else if (cn.elevation > neigh[j].elevation) cn = neigh[j];
+                        //if (Waypoints[neigh[j].id] != -1) { wc = cells[Waypoints[neigh[j].id]]; break; }
+                        if (cn.elevation > neigh[j].elevation) cn = neigh[j];
 
                     if (cn.elevation > c.elevation) //if we are in a valley or if we have found the ocean;
                     {
@@ -315,25 +322,24 @@ public class MapGenerator : MonoBehaviour
                             if (wc.elevation > cneigh[j].elevation) wc = cneigh[j];
                         break;
                     }
-                    waycorners.Add(c);
+                    
+                    //waycorners.Add(c);
                     c = cn;
                 }
 
                 if (wc == null) {continue; }
-                if (!wc.ocean) { LakeCell.Add(wc); wc.moisture += 0.1f; }
-                for(int j = 0; j < waycorners.Count; j++)
-                {
-                    if(Random.Range(0,100) < 5) waycorners[j].moisture += 0.0001f;
-                   // Waypoints[waycorners[j].id] = wc.id;
-                }
-                waycorners.Clear();
+                if (!wc.ocean) { LakeCell.Add(wc); wc.moisture += MoistureThreshold; }
             }
             for(int i = 0; i < LandCorners.Count; i++)
             {
-                if (LandCorners[i].moisture < 1.0f) continue;
-                LakeCorners.Add(LandCorners[i]);
+                if (LandCorners[i].moisture < LakeMoisture && LandCorners[i].terrian != TerrianType.TERRIAN_OCEAN) continue;
+
+                if (LandCorners[i].terrian == TerrianType.TERRIAN_LAND || LandCorners[i].terrian == TerrianType.TERRIAN_COAST) LakeCorners.Add(LandCorners[i]);
+                LandCorners[i].terrian = TerrianType.TERRIAN_LAKE;
                 LandCorners.RemoveAt(i);
+                i--;
             }
+            //corners = LandCorners;
             //for (int i = 0; i < LakeCell.Count; i++) if (LakeCell[i].moisture < LakeMoisture) LakeCell.RemoveAt(i); else LakeCell[i].ocean = true;
             //cycle 02: check all corners to see if they recieved moisture. If not drop from each of these After wards.(most likely these will be islands so all the water should filter to the ocean.)
             //for(int i = 0; i < HighCorners.Count; i++)
@@ -497,10 +503,10 @@ public class MapGenerator : MonoBehaviour
 
         if (ShowCorners) for (int i = 0; i < corners.Count; i++)
             {
-                if (corners[i].terrian == TerrianType.TERRIAN_LAND) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, 0, (corners[i].moisture*0.5f)*2); //new Color((corners[i].elevation - 0.7f) * 3.34f, corners[i].elevation + 0.1f, (corners[i].elevation - 0.7f) * 3.34f);
-                //else if (corners[i].terrian == TerrianType.TERRIAN_OCEAN) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, 0, 1.0f);
-                //else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.2f, 1.0f - Mathf.Clamp((corners[i].elevation), 0.0f, 1.0f), 1.0f - Mathf.Clamp((corners[i].elevation), 0.0f, 1.0f));
-                //else if (corners[i].terrian == TerrianType.TERRIAN_COAST) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.8f, 0.5f + (corners[i].elevation), 0.07f);
+                if (corners[i].terrian == TerrianType.TERRIAN_LAND) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, corners[i].moisture, 0.0f); //new Color((corners[i].elevation - 0.7f) * 3.34f, corners[i].elevation + 0.1f, (corners[i].elevation - 0.7f) * 3.34f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_OCEAN) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, 0, 1.0f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.5f,0.8f,1.0f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_COAST) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.8f, 0.5f + (corners[i].elevation), 0.07f);
             }
         return displaymap;
     }

@@ -327,9 +327,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e64c6579d193395499f3a3feda056284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Seed: 72958
-  Variant: 39954
-  MapSeed: -59785
+  Seed: 41561
+  Variant: -36950
+  MapSeed: -84193
   Bounds:
     serializedVersion: 2
     x: 0
@@ -344,7 +344,8 @@ MonoBehaviour:
   MinDistance: 7
   CoastalRoughness: 1.02
   NormalizationCyles: 3
-  LakeMoisture: 0
+  LakeMoisture: 0.079
+  MoistureThreshold: 0.2
   LLOYD_Irrations: 5
   PATEL_Irrations: 10
   NumHighPoints: {x: 20, y: 20}
@@ -353,7 +354,7 @@ MonoBehaviour:
   MaxElevation: {x: 1.11, y: 1.06}
   ElevationDropOff: {x: 0.82, y: 1.09}
   ShowEdges: 1
-  ShowCenters: 0
+  ShowCenters: 1
   ShowCorners: 1
 --- !u!4 &1533795991
 Transform:

@@ -327,9 +327,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e64c6579d193395499f3a3feda056284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Seed: -23644
-  Variant: 74872
-  MapSeed: -82297
+  Seed: 72958
+  Variant: 39954
+  MapSeed: -59785
   Bounds:
     serializedVersion: 2
     x: 0
@@ -337,22 +337,23 @@ MonoBehaviour:
     width: 1000
     height: 1000
   WaterHeight: 0.33
+  PerlinWeight: 0.24450295
+  CenterWeight: 0.75549704
   CoastCleanIrrations: 10
   CellPercentage: 27.1
-  LLOYD_Irrations: 10
-  PATEL_Irrations: 10
-  PerlinWeight: 0.3
-  CenterWeight: 0.7
-  NumHighPoints: {x: 20, y: 20}
-  MaxHighPointHeight: {x: 150, y: 400}
-  MaxHighPointWidth: {x: 10, y: 150}
-  MaxElevation: {x: 1.4, y: 1.8}
-  ElevationDropOff: {x: 0.78, y: 0.89}
   MinDistance: 7
   CoastalRoughness: 1.02
   NormalizationCyles: 3
+  LakeMoisture: 0
+  LLOYD_Irrations: 5
+  PATEL_Irrations: 10
+  NumHighPoints: {x: 20, y: 20}
+  MaxHighPointHeight: {x: 219, y: 422}
+  MaxHighPointWidth: {x: 219, y: 323}
+  MaxElevation: {x: 1.11, y: 1.06}
+  ElevationDropOff: {x: 0.82, y: 1.09}
   ShowEdges: 1
-  ShowCenters: 1
+  ShowCenters: 0
   ShowCorners: 1
 --- !u!4 &1533795991
 Transform:

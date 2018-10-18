@@ -32,6 +32,8 @@ public class MapGenerator : MonoBehaviour
     public float LakeMoisture = 0.8f;
     [Range(0.00001f, 0.2f)]
     public float MoistureThreshold = 0.01f;
+    [Range(0.0f, 10.0f)]
+    public float RainFallAverage = 4f;
 
 
     [Range(0, 10)]
@@ -296,11 +298,12 @@ public class MapGenerator : MonoBehaviour
             List<Cell> LakeCell = new List<Cell>();
             float rainpercent; // random rainfall for this region
 
-            for (int i = 0; i < LandCorners.Count; i++)
+            for (int i = 0; i < corners.Count; i++)
             {
-                rainpercent = Random.Range(0, 200)/100;
+                rainpercent = Random.Range(0, 100*RainFallAverage)/100;
                 wc = null;
-                c = LandCorners[i];
+                c = corners[i];
+                if (c.terrian != TerrianType.TERRIAN_LAND) continue;
                 for (int k = 0; k < 1000; k++)
                 { //basically a while loop with a option to die
                     if(c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if(cneigh[j].ocean) break; } break; }
@@ -330,14 +333,12 @@ public class MapGenerator : MonoBehaviour
                 if (wc == null) {continue; }
                 if (!wc.ocean) { LakeCell.Add(wc); wc.moisture += MoistureThreshold; }
             }
-            for(int i = 0; i < LandCorners.Count; i++)
+            for(int i = 0; i < corners.Count; i++)
             {
-                if (LandCorners[i].moisture < LakeMoisture && LandCorners[i].terrian != TerrianType.TERRIAN_OCEAN) continue;
-
-                if (LandCorners[i].terrian == TerrianType.TERRIAN_LAND || LandCorners[i].terrian == TerrianType.TERRIAN_COAST) LakeCorners.Add(LandCorners[i]);
-                LandCorners[i].terrian = TerrianType.TERRIAN_LAKE;
-                LandCorners.RemoveAt(i);
-                i--;
+                if (corners[i].terrian != TerrianType.TERRIAN_LAND) continue;
+                if (corners[i].moisture < LakeMoisture ) continue;
+                LakeCorners.Add(corners[i]);
+                corners[i].terrian = TerrianType.TERRIAN_LAKE;
             }
             //corners = LandCorners;
             //for (int i = 0; i < LakeCell.Count; i++) if (LakeCell[i].moisture < LakeMoisture) LakeCell.RemoveAt(i); else LakeCell[i].ocean = true;
@@ -503,9 +504,9 @@ public class MapGenerator : MonoBehaviour
 
         if (ShowCorners) for (int i = 0; i < corners.Count; i++)
             {
-                if (corners[i].terrian == TerrianType.TERRIAN_LAND) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, corners[i].moisture, 0.0f); //new Color((corners[i].elevation - 0.7f) * 3.34f, corners[i].elevation + 0.1f, (corners[i].elevation - 0.7f) * 3.34f);
+                if (corners[i].terrian == TerrianType.TERRIAN_LAND) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color((corners[i].elevation - 0.7f) * 3.34f, corners[i].elevation + 0.1f, (corners[i].elevation - 0.7f) * 3.34f);
                 else if (corners[i].terrian == TerrianType.TERRIAN_OCEAN) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, 0, 1.0f);
-                else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.5f,0.8f,1.0f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = (corners[i].moisture-LakeMoisture*0.25f) * new Color(0.6f,0.8f,1.0f);
                 else if (corners[i].terrian == TerrianType.TERRIAN_COAST) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.8f, 0.5f + (corners[i].elevation), 0.07f);
             }
         return displaymap;

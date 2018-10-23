@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
+
 public class MapGenerator : MonoBehaviour
 {
     [Header("Random Seeds")]
@@ -154,7 +155,7 @@ public class MapGenerator : MonoBehaviour
                 q = corners[i];
                 pos = q.getposition();
                 if (q.HasTerrianValue()) continue; //basically if we have already processed this value then we want to skip it. this is mainly for corners;
-                if (q.isEdge(bounds))
+                if (q.IsBoundary(bounds))
                 {
                     //handel edge of map;
                     neighbors = q.GetNeighbors();
@@ -263,10 +264,11 @@ public class MapGenerator : MonoBehaviour
             //    }
             //}
             #endregion
-            if (NormalizationCyles > -1) for (int i = 0; i < LandCorners.Count; i++)
+            if (NormalizationCyles > -1) for (int i = 0; i < corners.Count; i++)
                 {
 
-                    List<Cell> cn = LandCorners[i].GetCellNeighbors();
+                    if (corners[i].terrian == TerrianType.TERRIAN_OCEAN) continue;
+                    List<Cell> cn = corners[i].GetCellNeighbors();
                     float elvg = 0.000f, elnum = 0.0f;
                     for (int j = 0; j < cn.Count; j++)
                     {
@@ -274,23 +276,28 @@ public class MapGenerator : MonoBehaviour
                         for (int k = 1; k < NormalizationCyles + 1; k++) { float p = (1 / (Mathf.Pow(2, (k)))); elvg += getcellelevationaverage(k, cn[j]) * p; elnum += p; }
                         elvg += cn[j].elevation; elnum++;
                     }
-                    elvg += LandCorners[i].elevation; elnum++;
+                    elvg += corners[i].elevation; elnum++;
                     //if (elnum == 0) continue; the above makes this worthless;
                     elvg /= elnum;
-                    if (elvg > LandCorners[i].elevation) LandCorners[i].elevation = elvg;
+                    if (elvg > corners[i].elevation) corners[i].elevation = elvg;
                 }
         }
         #endregion
 
         //for (int i = 0; i < cells.Count; i++) if (i != cells[i].id) Debug.Log("id: " + cells[i].id + " does not match Cell " + i);
         //for (int i =0; i < corners.Count; i++)if(i != corners[i].id) Debug.Log("id: " + corners[i].id + " does not match Corner " + i);
-        #region Phase 4: Water Sheding
+        #region Phase 6: Tempature Rough Run
+        {
+
+        }
+        #endregion
+        #region Phase 5: Water Sheding
         {
             //Phase 6: Do water sheding starting at the highest points and Dropping the water down letting it go down the slops. We want to favor the side of the mountain that the wind would blow against (according to the sphereical rotation)
             //cyle 01: drop water from Highpoints (if no high points then do some guess work to make high points [well have to do this at a later point])
             //List<int> Waypoints = new List<int>(corners.Count);
             //for (int i = 0; i < corners.Count; i++) Waypoints.Add(-1);
-            
+
             Corner c, cn; List<Corner> neigh;
             //List<Corner> waycorners = new List<Corner>();
             List<Cell> cneigh;
@@ -300,16 +307,16 @@ public class MapGenerator : MonoBehaviour
 
             for (int i = 0; i < corners.Count; i++)
             {
-                rainpercent = Random.Range(0, 100*RainFallAverage)/100;
+                rainpercent = Random.Range(0, 100 * RainFallAverage) / 100;
                 wc = null;
                 c = corners[i];
                 if (c.terrian != TerrianType.TERRIAN_LAND) continue;
                 for (int k = 0; k < 1000; k++)
                 { //basically a while loop with a option to die
-                    if(c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if(cneigh[j].ocean) break; } break; }
+                    if (c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if (cneigh[j].ocean) break; } break; }
                     neigh = c.GetNeighbors();
                     cn = neigh[0];
-                    if (Random.Range(0, 100) < 100) c.moisture += MoistureThreshold*rainpercent;
+                    if (Random.Range(0, 100) < 100) c.moisture += MoistureThreshold * rainpercent;
                     //if (Waypoints[cn.id] != -1) { wc = cells[Waypoints[cn.id]]; break; }
 
                     for (int j = 1; j < neigh.Count; j++) //find the lowest elevation
@@ -325,21 +332,24 @@ public class MapGenerator : MonoBehaviour
                             if (wc.elevation > cneigh[j].elevation) wc = cneigh[j];
                         break;
                     }
-                    
+
                     //waycorners.Add(c);
                     c = cn;
                 }
 
-                if (wc == null) {continue; }
+                if (wc == null) { continue; }
                 if (!wc.ocean) { LakeCell.Add(wc); wc.moisture += MoistureThreshold; }
             }
-            for(int i = 0; i < corners.Count; i++)
+            //LandCorners.Clear();
+            for (int i = 0; i < corners.Count; i++)
             {
                 if (corners[i].terrian != TerrianType.TERRIAN_LAND) continue;
-                if (corners[i].moisture < LakeMoisture ) continue;
+                if (corners[i].moisture < LakeMoisture) continue;
                 LakeCorners.Add(corners[i]);
                 corners[i].terrian = TerrianType.TERRIAN_LAKE;
             }
+
+            #region Old shit
             //corners = LandCorners;
             //for (int i = 0; i < LakeCell.Count; i++) if (LakeCell[i].moisture < LakeMoisture) LakeCell.RemoveAt(i); else LakeCell[i].ocean = true;
             //cycle 02: check all corners to see if they recieved moisture. If not drop from each of these After wards.(most likely these will be islands so all the water should filter to the ocean.)
@@ -356,19 +366,19 @@ public class MapGenerator : MonoBehaviour
             //            cn = neigh[j];
             //        if (cn.elevation >= c.elevation)
             //            break;
-                    
+
             //        c = cn;
-                   
+
             //    }
             //}
+            #endregion 
+
         }
         #endregion
         //Phase 7: Normalize Moisture And create outlets of lakes to Ocean
 
         //Phase 8: 
-
     }
-
 
     private float getcellelevationaverage(int irrations, Cell c)
     {
@@ -467,7 +477,7 @@ public class MapGenerator : MonoBehaviour
                 Random.Range(bounds.yMin + bounds.size.y * 0.01f, bounds.yMax - bounds.size.y * 0.01f))); // we add a 1% boarder + 10 units so that we dont get any points to close to the edge
         return points;
     }
-    private void drawline(ref Color[,] displaymap, Vector2 to, Vector2 from)
+    private void drawline(ref Color[,] displaymap, Vector2 to, Vector2 from, Color c)
     {
         float xPix = to.x;
         float yPix = to.y;
@@ -482,7 +492,7 @@ public class MapGenerator : MonoBehaviour
         for (int u = 0; u <= intLength; u++)
         {
             //if (xPix < Bounds.width && yPix < Bounds.height && xPix >= 0 && yPix >= 0)
-                displaymap[(int)xPix, (int)yPix] = new Color(0.2f, 0.2f, 0.2f);
+                displaymap[(int)xPix, (int)yPix] = c;
             //else failed = true;
             xPix += dx;
             yPix += dy;
@@ -491,24 +501,65 @@ public class MapGenerator : MonoBehaviour
     }
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
+
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
+        //Cell C;
+        //Corner c1;
+        //Corner c2;
+        //List<Corner> cs;
+        //Vector2 norm1, norm2;
+        //Vector2 pos1, pos2, cpos;
+        //for (int i = 0; i < cells.Count; i++)
+        //{
+        //    C = cells[i];
+        //    cs = C.GetCorners();
+        //    for (int j = 0; j < cs.Count; j++)
+        //    {
+        //        c1 = cs[j];
+        //        c2 = cs.Count == j + 1 ? cs[0] : cs[j + 1];
+        //        pos1 = c1.getposition();
+        //        pos2 = c2.getposition();
+        //        cpos = C.getpos();
+
+        //        norm1 = (cpos - pos1);
+        //        norm1.Normalize();
+
+        //        norm2 = (cpos - pos2);
+        //        norm2.Normalize();
+
+        //        for (int k = 0; k < 1000; k++) //infinate loop
+        //        {
+        //            pos1 += norm1;
+        //            pos2 += norm2;
+        //            drawline(ref displaymap, pos1, pos2, new Color(0.9f, 0.9f, 0.9f));
+        //            if (Vector2.Distance(pos1, pos2) < 1 || Vector2.Distance(pos1, cpos) < 1 || Vector2.Distance(pos2, cpos) < 1) break;
+        //        }
+                
+        //    }
+        //}
+
+        
 
         if (ShowCenters) for (int i = 0; i < cells.Count; i++)
             {
-                if(cells[i].coast) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.8f, 0.5f + (cells[i].elevation), 0.07f);
-                else if (cells[i].ocean) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color((1 - cells[i].moisture)*0.5f, (1- cells[i].moisture)*0.5f, cells[i].moisture);
+                if (cells[i].coast) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.8f, 0.5f + (cells[i].elevation), 0.07f);
+                else if (cells[i].ocean) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color((1 - cells[i].moisture) * 0.5f, (1 - cells[i].moisture) * 0.5f, cells[i].moisture);
                 //else if (cells[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.2f, 1.0f - Mathf.Clamp((cells[i].elevation), 0.0f, 1.0f), 1.0f - Mathf.Clamp((cells[i].elevation), 0.0f, 1.0f));
                 else displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color((cells[i].elevation - 0.7f) * 3.34f, cells[i].elevation + 0.1f, (cells[i].elevation - 0.7f) * 3.34f);
             }
-        if (ShowEdges) for (int i = 0; i < edges.Count; i++) drawline(ref displaymap, edges[i].getto(), edges[i].getfrom());
+        if (ShowEdges) for (int i = 0; i < edges.Count; i++) drawline(ref displaymap, edges[i].getto(), edges[i].getfrom(), new Color(0.2f, 0.2f, 0.2f));
 
         if (ShowCorners) for (int i = 0; i < corners.Count; i++)
             {
                 if (corners[i].terrian == TerrianType.TERRIAN_LAND) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color((corners[i].elevation - 0.7f) * 3.34f, corners[i].elevation + 0.1f, (corners[i].elevation - 0.7f) * 3.34f);
                 else if (corners[i].terrian == TerrianType.TERRIAN_OCEAN) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0, 0, 1.0f);
-                else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = (corners[i].moisture-LakeMoisture*0.25f) * new Color(0.6f,0.8f,1.0f);
+                else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = (corners[i].moisture - LakeMoisture * 0.25f) * new Color(0.6f, 0.8f, 1.0f);
                 else if (corners[i].terrian == TerrianType.TERRIAN_COAST) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.8f, 0.5f + (corners[i].elevation), 0.07f);
             }
+     
+
+
+
         return displaymap;
     }
     private List<Cell> createcells(List<Voronoi2.GraphEdge> oedges, List<Vector2> points, ref List<Edge> edges, ref List<Corner> corners)
@@ -531,7 +582,7 @@ public class MapGenerator : MonoBehaviour
 
         }
         for(int i = 0; i < corners.Count; i++)
-        corners[i].gatherneighbors(); //doing the neighbor gathering after cuz of some issue;
+        corners[i].GatherNeighbors(); //doing the neighbor gathering after cuz of some issue;
         //Debug.Log(a);
         return cells;
     }
@@ -581,7 +632,7 @@ public class MapGenerator : MonoBehaviour
             for (int i = 0; i < corners.Count; i++)
             {
                 q = corners[i];
-                if (q.isEdge(bounds)) { newcorners[i] = q.getposition(); continue; }
+                if (q.IsBoundary(bounds)) { newcorners[i] = q.getposition(); continue; }
 
                 p1 = new Vector2();
                 cellneighbors = q.GetCellNeighbors();
@@ -704,8 +755,10 @@ public class MapGenerator : MonoBehaviour
         //Vector2 from, to; //from is always the lowest Y then lowest X
         Cell c1, c2; //belongs to 2 points on either side to of it;
         List<Edge> neighbors;
-        public int id { get; set; }
-        Corner[] ends;
+        public int id { get; private set; }
+        Corner[] ends; 
+        public int riverlevel { get; private set; }
+        public float tempature { get; set; }
         Midpoint m;
 
         public Edge(Vector2 f1, Vector2 t1, Cell c1, Cell c2, int index, ref List<Corner> corners)
@@ -837,6 +890,7 @@ public class MapGenerator : MonoBehaviour
         public List<Cell> touches;
         public float elevation { get; set; }
         public float moisture { get; set; }
+        public float tempature { get; set; }
         public TerrianType terrian;
         public int id { get; set; }
         List<Corner> neighbors;
@@ -860,7 +914,7 @@ public class MapGenerator : MonoBehaviour
             }
             return this;
         }
-        public void gatherneighbors()
+        public void GatherNeighbors()
         {
             for (int j = 0; j < edges.Count; j++)
             {
@@ -884,7 +938,19 @@ public class MapGenerator : MonoBehaviour
             this.terrian = type;
         }
         public void SetTerrianType(TerrianType type) { this.terrian = type;  }
-        public bool isEdge(Rect bounds)
+        public int GetEdgeIdFromCorners(Corner c)
+        {
+            Corner[] cn;
+            for (int i = 0; i < edges.Count; i++)
+            {
+                cn = edges[i].GetCorners();
+                for (int k = 0; k < 2; k++)
+                    if (cn[k] == c) return edges[i].id;
+            }
+            //else we didnt find one so return null
+           return -1;
+        }
+        public bool IsBoundary(Rect bounds)
         {
             if (bounds.xMin >= position.x || bounds.yMin >= position.y || bounds.xMax - 1 <= position.x || bounds.yMax-1 <= position.y) return true;
             return false;

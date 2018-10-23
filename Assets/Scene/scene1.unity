@@ -281,7 +281,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1286694061}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.8, y: -0.4, z: 0}
   m_LocalScale: {x: 1000, y: 1000, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -327,9 +327,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e64c6579d193395499f3a3feda056284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Seed: 41561
-  Variant: -36950
-  MapSeed: -84193
+  Seed: 54288
+  Variant: 96216
+  MapSeed: 70303
   Bounds:
     serializedVersion: 2
     x: 0
@@ -340,12 +340,13 @@ MonoBehaviour:
   PerlinWeight: 0.24450295
   CenterWeight: 0.75549704
   CoastCleanIrrations: 10
-  CellPercentage: 27.1
+  CellPercentage: 27
   MinDistance: 7
   CoastalRoughness: 1.02
-  NormalizationCyles: 3
-  LakeMoisture: 0.079
-  MoistureThreshold: 0.2
+  NormalizationCyles: 2
+  LakeMoisture: 0.885
+  MoistureThreshold: 0.017
+  RainFallAverage: 4
   LLOYD_Irrations: 5
   PATEL_Irrations: 10
   NumHighPoints: {x: 20, y: 20}
@@ -355,7 +356,7 @@ MonoBehaviour:
   ElevationDropOff: {x: 0.82, y: 1.09}
   ShowEdges: 1
   ShowCenters: 1
-  ShowCorners: 1
+  ShowCorners: 0
 --- !u!4 &1533795991
 Transform:
   m_ObjectHideFlags: 0

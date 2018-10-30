@@ -356,7 +356,7 @@ MonoBehaviour:
   ElevationDropOff: {x: 0.82, y: 1.09}
   ShowEdges: 1
   ShowCenters: 1
-  ShowCorners: 0
+  ShowCorners: 1
 --- !u!4 &1533795991
 Transform:
   m_ObjectHideFlags: 0

@@ -53,14 +53,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\DrawShape.cs" />
+     <Compile Include="Assets\GameControl.cs" />
+     <Compile Include="Assets\PlayerPrefab.cs" />
+     <Compile Include="Assets\Scripts\Game\PlayerPrefab.cs" />
      <Compile Include="Assets\Scripts\MapGenerator\BinaryHeap.cs" />
      <Compile Include="Assets\Scripts\MapGenerator\MapDisplay.cs" />
      <Compile Include="Assets\Scripts\MapGenerator\MapGenerator.cs" />
+     <Compile Include="Assets\Scripts\Utls\DrawShape.cs" />
      <Compile Include="Assets\Scripts\Utls\PerlinGenerator.cs" />
      <Compile Include="Assets\Scripts\Utls\spriteCreator.cs" />
      <Compile Include="Assets\Scripts\Utls\Voronoi.cs" />
      <Compile Include="Assets\Scripts\Utls\VoronoiEssenials.cs" />
+     <Compile Include="Assets\WorldCell.cs" />
  <Reference Include="UnityEditor.StandardEvents">
  <HintPath>H:/Projects/TilemapsYT/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
  </Reference>

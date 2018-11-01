@@ -479,67 +479,68 @@ public class MapGenerator : MonoBehaviour
     }
     private void drawline(ref Color[,] displaymap, Vector2 to, Vector2 from, Color c)
     {
-        float xPix = to.x;
-        float yPix = to.y;
-        bool failed = false;
+        //float x0 = Mathf.Round(from.x);
+        //float y0 = Mathf.Round(from.y);
+        //float x1 = Mathf.Round(to.x);
+        //float y1 = Mathf.Round(to.y);
+        //float dx = Mathf.Abs(x1 - x0);
+        //float dy = Mathf.Abs(y1 - y0);
+        //int sx = x0 < x1 ? 1 : -1;
+        //int sy = y0 < y1 ? 1 : -1;
+        //float err = dx - dy;
+
+        //int itt = 0;
+        //while (true)
+        //{
+        //    displaymap[(int)(x0), (int)(y0)] = c;
+        //    itt++;
+        //    if (x0 == x1 && y0 == y1) break;
+        //    float e2 = 2 * err;
+        //    if (e2 > -dy)
+        //    {
+        //        err -= dy;
+        //        x0 += sx;
+        //    }
+        //    if (e2 < dx)
+        //    {
+        //        err += dx;
+        //        y0 += sy;
+        //    }
+        //}
+        float xPix = Mathf.Round(to.x);
+        float yPix = Mathf.Round(to.y);
         float width = (float)from.x - (float)to.x;
         float height = (float)from.y - (float)to.y;
         float length = Mathf.Abs(width);
         if (Mathf.Abs(height) > length) length = Mathf.Abs(height);
-        int intLength = (int)length;
+        int intLength = (int)(length);
         float dx = width / (float)length;
         float dy = height / (float)length;
         for (int u = 0; u <= intLength; u++)
         {
-            //if (xPix < Bounds.width && yPix < Bounds.height && xPix >= 0 && yPix >= 0)
+            if ((xPix) < Bounds.width && (yPix) < Bounds.height && xPix >= 0 && yPix >= 0)
                 displaymap[(int)xPix, (int)yPix] = c;
-            //else failed = true;
             xPix += dx;
             yPix += dy;
         }
-        if (failed) Debug.Log("Line out of range: " + to.ToString() + from.ToString());
     }
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
-
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
-        //Cell C;
-        //Corner c1;
-        //Corner c2;
-        //List<Corner> cs;
-        //Vector2 norm1, norm2;
-        //Vector2 pos1, pos2, cpos;
-        //for (int i = 0; i < cells.Count; i++)
-        //{
-        //    C = cells[i];
-        //    cs = C.GetCorners();
-        //    for (int j = 0; j < cs.Count; j++)
-        //    {
-        //        c1 = cs[j];
-        //        c2 = cs.Count == j + 1 ? cs[0] : cs[j + 1];
-        //        pos1 = c1.getposition();
-        //        pos2 = c2.getposition();
-        //        cpos = C.getpos();
-
-        //        norm1 = (cpos - pos1);
-        //        norm1.Normalize();
-
-        //        norm2 = (cpos - pos2);
-        //        norm2.Normalize();
-
-        //        for (int k = 0; k < 1000; k++) //infinate loop
-        //        {
-        //            pos1 += norm1;
-        //            pos2 += norm2;
-        //            drawline(ref displaymap, pos1, pos2, new Color(0.9f, 0.9f, 0.9f));
-        //            if (Vector2.Distance(pos1, pos2) < 1 || Vector2.Distance(pos1, cpos) < 1 || Vector2.Distance(pos2, cpos) < 1) break;
-        //        }
-                
-        //    }
-        //}
-
-        
-
+        Cell[] c;
+        Corner[] cr;
+        for (int i = 0; i < edges.Count; i++)
+        {
+            cr = edges[i].GetCorners();
+            c = edges[i].getcells();
+            for(int j = 0; j < 2; j++)
+            {
+                Color cl = c[j].coast ? new Color(0.7f, 0.9f, 0.3f) : c[j].ocean ? new Color(0.3f, 0.3f, 0.9f) : new Color(0.3f, c[j].elevation, c[j].moisture);
+                //drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
+                //drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
+                drawtriangle(ref displaymap, cr[0].getposition(), cr[1].getposition(), c[j].getpos(), cl);
+            }
+        }
         if (ShowCenters) for (int i = 0; i < cells.Count; i++)
             {
                 if (cells[i].coast) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.8f, 0.5f + (cells[i].elevation), 0.07f);
@@ -644,6 +645,59 @@ public class MapGenerator : MonoBehaviour
             }
             for (int i = 0; i < newcorners.GetLength(0); i++) corners[i].SetPosition(newcorners[i]); // now we assign the points
         }
+    }
+
+    void fillBottomFlatTriangle(ref Color[,] colormap, Vector2 v1, Vector2 v2, Vector2 v3, Color c)
+    {
+        float invslope1 = (v2.x - v1.x) / (v2.y - v1.y);
+        float invslope2 = (v3.x - v1.x) / (v3.y - v1.y);
+
+        float curx1 = v1.x;
+        float curx2 = v1.x;
+
+        for (int scanlineY = (int)(v1.y); scanlineY <= v2.y; scanlineY++)
+        {
+            drawline(ref colormap, new Vector2((int)curx1, scanlineY), new Vector2((int)curx2, scanlineY), c);
+            curx1 += invslope1;
+            curx2 += invslope2;
+        }
+    }
+    void fillTopFlatTriangle(ref Color[,] colormap, Vector2 v1, Vector2 v2, Vector2 v3, Color c)
+    {
+        float invslope1 = (v3.x - v1.x) / (v3.y - v1.y);
+        float invslope2 = (v3.x - v2.x) / (v3.y - v2.y);
+
+        float curx1 = v3.x;
+        float curx2 = v3.x;
+
+        for (int scanlineY =(int)(v3.y); scanlineY > v1.y; scanlineY--)
+        {
+            drawline(ref colormap, new Vector2((int)curx1, scanlineY), new Vector2((int)curx2, scanlineY), c);
+            curx1 -= invslope1;
+            curx2 -= invslope2;
+        }
+    }
+    void drawtriangle(ref Color[,] colormap, Vector2 v1, Vector2 v2, Vector2 v3, Color c)
+    {
+        //sort so that thee larget v is v1 -> v3
+        Vector2 v4;
+        if (v1.y > v2.y && v3.y > v2.y) //if v2 is the largest
+        {
+            v4 = v1; v1 = v2; v2 = v4;
+            if (v2.y > v3.y) { v4 = v2; v2 = v3; v3 = v4; } //test the other 2
+        }
+        else if (v1.y > v3.y) //if v3 is the largest
+        {
+            v4 = v1; v1 = v3; v3 = v4;
+            if (v2.y > v3.y) { v4 = v2; v2 = v3; v3 = v4; } //test the other 2
+        }
+        else if (v2.y > v3.y) { v4 = v2; v2 = v3; v3 = v4; } //if v1 is the largest check the other 2;
+
+        if (v2.y == v3.y) { fillBottomFlatTriangle(ref colormap, v1, v2, v3, c); return; }
+        if (v1.y == v2.y) { fillTopFlatTriangle(ref colormap, v1, v2, v3, c);    return; }
+        v4 = new Vector2((int)(v1.x + ((float)(v2.y - v1.y) / (float)(v3.y - v1.y)) * (v3.x - v1.x)), v2.y);
+        fillBottomFlatTriangle(ref colormap, v1, v2, v4, c);
+        fillTopFlatTriangle(ref colormap, v2, v4, v3, c);
     }
     void bruteforceremove(ref List<Vector2> points, ref List<Cell> cells, float mindistance) //removes cells that have centers to close to eachother
     {

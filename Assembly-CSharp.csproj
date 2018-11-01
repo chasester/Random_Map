@@ -62,6 +62,7 @@
      <Compile Include="Assets\Scripts\Utls\DrawShape.cs" />
      <Compile Include="Assets\Scripts\Utls\PerlinGenerator.cs" />
      <Compile Include="Assets\Scripts\Utls\spriteCreator.cs" />
+     <Compile Include="Assets\Scripts\Utls\Triangle.cs" />
      <Compile Include="Assets\Scripts\Utls\Voronoi.cs" />
      <Compile Include="Assets\Scripts\Utls\VoronoiEssenials.cs" />
      <Compile Include="Assets\WorldCell.cs" />

@@ -327,9 +327,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e64c6579d193395499f3a3feda056284, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Seed: 54288
-  Variant: 96216
-  MapSeed: 70303
+  Seed: 5549
+  Variant: 32256
+  MapSeed: 42003
   Bounds:
     serializedVersion: 2
     x: 0
@@ -356,7 +356,7 @@ MonoBehaviour:
   ElevationDropOff: {x: 0.82, y: 1.09}
   ShowEdges: 1
   ShowCenters: 1
-  ShowCorners: 1
+  ShowCorners: 0
 --- !u!4 &1533795991
 Transform:
   m_ObjectHideFlags: 0

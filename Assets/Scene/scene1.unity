@@ -354,8 +354,8 @@ MonoBehaviour:
   MaxHighPointWidth: {x: 219, y: 323}
   MaxElevation: {x: 1.11, y: 1.06}
   ElevationDropOff: {x: 0.82, y: 1.09}
-  ShowEdges: 1
-  ShowCenters: 1
+  ShowEdges: 0
+  ShowCenters: 0
   ShowCorners: 0
 --- !u!4 &1533795991
 Transform:

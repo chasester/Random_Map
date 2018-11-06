@@ -533,14 +533,16 @@ public class MapGenerator : MonoBehaviour
         {
             cr = edges[i].GetCorners();
             c = edges[i].getcells();
-            for(int j = 0; j < 2; j++)
+            for (int j = 0; j < 2; j++)
             {
-                Color cl = c[j].coast ? new Color(0.7f, 0.9f, 0.3f) : c[j].ocean ? new Color(0.3f, 0.3f, 0.9f) : new Color(0.3f, c[j].elevation, c[j].moisture);
-                //drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
-                //drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
+                Color cl = /*new Color(Random.Range(0.2f, 1f), Random.Range(0.2f, 1f), Random.Range(0.2f, 1f));*/
+                    c[j].coast ? new Color(0.7f, 0.9f, 0.3f) : c[j].ocean ? new Color(0.3f, 0.3f, 0.9f) : new Color(0.3f, c[j].elevation, c[j].moisture);
+                    drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
+                    drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
                 drawtriangle(ref displaymap, cr[0].getposition(), cr[1].getposition(), c[j].getpos(), cl);
             }
         }
+        //drawtriangle(ref displaymap, new Vector2(Random.Range(Bounds.xMin, Bounds.xMax), Random.Range(Bounds.yMin, Bounds.yMax)), new Vector2(Random.Range(Bounds.xMin, Bounds.xMax), Random.Range(Bounds.yMin, Bounds.yMax)), new Vector2(Random.Range(Bounds.xMin, Bounds.xMax), Random.Range(Bounds.yMin, Bounds.yMax)), Color.wh);
         if (ShowCenters) for (int i = 0; i < cells.Count; i++)
             {
                 if (cells[i].coast) displaymap[(int)cells[i].getpos().x, (int)cells[i].getpos().y] = new Color(0.8f, 0.5f + (cells[i].elevation), 0.07f);
@@ -557,7 +559,7 @@ public class MapGenerator : MonoBehaviour
                 else if (corners[i].terrian == TerrianType.TERRIAN_LAKE) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = (corners[i].moisture - LakeMoisture * 0.25f) * new Color(0.6f, 0.8f, 1.0f);
                 else if (corners[i].terrian == TerrianType.TERRIAN_COAST) displaymap[(int)corners[i].getposition().x, (int)corners[i].getposition().y] = new Color(0.8f, 0.5f + (corners[i].elevation), 0.07f);
             }
-     
+
 
 
 
@@ -655,9 +657,9 @@ public class MapGenerator : MonoBehaviour
         float curx1 = v1.x;
         float curx2 = v1.x;
 
-        for (int scanlineY = (int)(v1.y); scanlineY <= v2.y; scanlineY++)
+        for (int scanlineY = Mathf.RoundToInt(v1.y); scanlineY <=v2.y; scanlineY++)
         {
-            drawline(ref colormap, new Vector2((int)curx1, scanlineY), new Vector2((int)curx2, scanlineY), c);
+            drawline(ref colormap, new Vector2(Mathf.RoundToInt(curx1), Mathf.RoundToInt(scanlineY)), new Vector2(Mathf.RoundToInt(curx2), Mathf.RoundToInt(scanlineY)), c);
             curx1 += invslope1;
             curx2 += invslope2;
         }
@@ -670,9 +672,9 @@ public class MapGenerator : MonoBehaviour
         float curx1 = v3.x;
         float curx2 = v3.x;
 
-        for (int scanlineY =(int)(v3.y); scanlineY > v1.y; scanlineY--)
+        for (int scanlineY = Mathf.RoundToInt(v3.y); scanlineY > v1.y; scanlineY--)
         {
-            drawline(ref colormap, new Vector2((int)curx1, scanlineY), new Vector2((int)curx2, scanlineY), c);
+            drawline(ref colormap, new Vector2(Mathf.RoundToInt(curx1), Mathf.RoundToInt(scanlineY)), new Vector2(Mathf.RoundToInt(curx2), Mathf.RoundToInt(scanlineY)), c);
             curx1 -= invslope1;
             curx2 -= invslope2;
         }
@@ -693,10 +695,11 @@ public class MapGenerator : MonoBehaviour
         }
         else if (v2.y > v3.y) { v4 = v2; v2 = v3; v3 = v4; } //if v1 is the largest check the other 2;
 
-        if (v2.y == v3.y) { fillBottomFlatTriangle(ref colormap, v1, v2, v3, c); return; }
-        if (v1.y == v2.y) { fillTopFlatTriangle(ref colormap, v1, v2, v3, c);    return; }
+        //if (v2.y == v3.y) { fillBottomFlatTriangle(ref colormap, v1, v2, v3, c); return; }
+        //if (v1.y == v2.y) { fillTopFlatTriangle(ref colormap, v1, v2, v3, c);    return; }
+        
         v4 = new Vector2((int)(v1.x + ((float)(v2.y - v1.y) / (float)(v3.y - v1.y)) * (v3.x - v1.x)), v2.y);
-        fillBottomFlatTriangle(ref colormap, v1, v2, v4, c);
+        fillBottomFlatTriangle(ref colormap, v1, v4, v2, c);
         fillTopFlatTriangle(ref colormap, v2, v4, v3, c);
     }
     void bruteforceremove(ref List<Vector2> points, ref List<Cell> cells, float mindistance) //removes cells that have centers to close to eachother

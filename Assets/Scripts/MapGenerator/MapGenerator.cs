@@ -473,8 +473,8 @@ public class MapGenerator : MonoBehaviour
     {
         List<Vector2> points = new List<Vector2>();
         for (int i = 0; i < NumPoints; i++)
-            points.Add(new Vector2(Random.Range(bounds.xMin + bounds.size.x * 0.01f , bounds.xMax - bounds.size.x * 0.01f),
-                Random.Range(bounds.yMin + bounds.size.y * 0.01f, bounds.yMax - bounds.size.y * 0.01f))); // we add a 1% boarder + 10 units so that we dont get any points to close to the edge
+            points.Add(new Vector2(Mathf.Round(Random.Range(bounds.xMin + bounds.size.x * 0.01f , bounds.xMax - bounds.size.x * 0.01f)),
+                Mathf.Round(Random.Range(bounds.yMin + bounds.size.y * 0.01f, bounds.yMax - bounds.size.y * 0.01f)))); // we add a 1% boarder + 10 units so that we dont get any points to close to the edge
         return points;
     }
     private void drawline(ref Color[,] displaymap, Vector2 to, Vector2 from, Color c)
@@ -524,9 +524,15 @@ public class MapGenerator : MonoBehaviour
             yPix += dy;
         }
     }
+
+    void AveragePixel(ref Color[,] colormap, int x, int y)
+    {
+         
+    }
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
+        for (int i = 0; i < (int)bounds.width; i++) for (int j = 0; j < (int)bounds.height; j++) displaymap[i, j] = Color.yellow;
         Cell[] c;
         Corner[] cr;
         for (int i = 0; i < edges.Count; i++)
@@ -537,11 +543,14 @@ public class MapGenerator : MonoBehaviour
             {
                 Color cl = /*new Color(Random.Range(0.2f, 1f), Random.Range(0.2f, 1f), Random.Range(0.2f, 1f));*/
                     c[j].coast ? new Color(0.7f, 0.9f, 0.3f) : c[j].ocean ? new Color(0.3f, 0.3f, 0.9f) : new Color(0.3f, c[j].elevation, c[j].moisture);
-                    drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
-                    drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
+                drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
+                drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
                 drawtriangle(ref displaymap, cr[0].getposition(), cr[1].getposition(), c[j].getpos(), cl);
             }
+
         }
+
+
         //drawtriangle(ref displaymap, new Vector2(Random.Range(Bounds.xMin, Bounds.xMax), Random.Range(Bounds.yMin, Bounds.yMax)), new Vector2(Random.Range(Bounds.xMin, Bounds.xMax), Random.Range(Bounds.yMin, Bounds.yMax)), new Vector2(Random.Range(Bounds.xMin, Bounds.xMax), Random.Range(Bounds.yMin, Bounds.yMax)), Color.wh);
         if (ShowCenters) for (int i = 0; i < cells.Count; i++)
             {
@@ -695,8 +704,8 @@ public class MapGenerator : MonoBehaviour
         }
         else if (v2.y > v3.y) { v4 = v2; v2 = v3; v3 = v4; } //if v1 is the largest check the other 2;
 
-        //if (v2.y == v3.y) { fillBottomFlatTriangle(ref colormap, v1, v2, v3, c); return; }
-        //if (v1.y == v2.y) { fillTopFlatTriangle(ref colormap, v1, v2, v3, c);    return; }
+        if (Mathf.Round(v2.y) == Mathf.Round(v3.y)) { fillBottomFlatTriangle(ref colormap, v1, v2, v3, c); return; }
+        if (Mathf.Round(v2.y) == Mathf.Round(v1.y)) { fillTopFlatTriangle(ref colormap, v1, v2, v3, c);    return; }
         
         v4 = new Vector2((int)(v1.x + ((float)(v2.y - v1.y) / (float)(v3.y - v1.y)) * (v3.x - v1.x)), v2.y);
         fillBottomFlatTriangle(ref colormap, v1, v4, v2, c);

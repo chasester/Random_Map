@@ -221,16 +221,19 @@ public class MapGenerator : MonoBehaviour
                 List<Corner> cr = c.GetCorners();
                 float eavg = 0, etotal = 0;
                 bool isocean = true;
+                bool hasocean = false;
+                bool hascoast = false;
                 for (int j = 0; j < cr.Count; j++)
                 {
-                    if (cr[j].terrian == TerrianType.TERRIAN_OCEAN) continue;
+                    if (cr[j].terrian == TerrianType.TERRIAN_OCEAN) {hasocean = true; continue; }
                     if (cr[j].terrian != TerrianType.TERRIAN_COAST) isocean = false;
-                    if (!c.coast) c.coast = cr[j].terrian == TerrianType.TERRIAN_COAST; //does it contain a coast
+                    if (!hascoast) hascoast = cr[j].terrian == TerrianType.TERRIAN_COAST; //does it contain a coast
 
                     eavg += cr[j].elevation;//*Random.Range(0.6f, 1.2f)*(cr[j].terrian == TerrianType.TERRIAN_COAST ? 0.5f:1.0f);
                     etotal += 1.0f;//*Random.Range(0.8f, 1.2f);
                 }
-                if (isocean)
+                if (hasocean && hascoast) c.coast = true;
+                if (isocean && !hascoast)
                 {
                     c.ocean = true;//is 100% ocean;
                     c.elevation = 1.0f;
@@ -524,11 +527,6 @@ public class MapGenerator : MonoBehaviour
             yPix += dy;
         }
     }
-
-    void AveragePixel(ref Color[,] colormap, int x, int y)
-    {
-         
-    }
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
@@ -656,6 +654,27 @@ public class MapGenerator : MonoBehaviour
             }
             for (int i = 0; i < newcorners.GetLength(0); i++) corners[i].SetPosition(newcorners[i]); // now we assign the points
         }
+        //phase 3: create edge lines
+        //List<Corner> corns;
+        //for (int i = 0; i < corners.Count; i++)
+        //{
+        //    if (!corners[i].IsBoundary(bounds)) continue;
+        //    cellneighbors =  corners[i].GetCellNeighbors();
+        //    for(int j = 0; j < cellneighbors.Count; j++)
+        //    {
+        //        corns = cellneighbors[j].GetCorners();
+        //        for(int k = 0; k < corns.Count; j++)
+        //        {
+        //            if (corns[k].getposition().y == corners[i].getposition().y || corns[j].getposition().x == corners[i].getposition().x)
+        //            {
+        //                if (corns[k].GetEdgeIdFromCorners(corners[i]) > 0) continue;
+        //                List<Corner> c = new List<Corner> { corners[i], corns[k] };
+        //                edges.Add(new Edge(corns[k].getposition(), corners[i].getposition(), cellneighbors[j], cellneighbors[j], edges.Count, ref c));
+        //            }
+                        
+        //        }
+        //    }
+        //}
     }
 
     void fillBottomFlatTriangle(ref Color[,] colormap, Vector2 v1, Vector2 v2, Vector2 v3, Color c)

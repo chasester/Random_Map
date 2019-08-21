@@ -24,10 +24,10 @@ public class MapGenerator : MonoBehaviour
     [Range(0.01f, 50.0f)]
     public float CellPercentage = 3f; //percent of the map that cells contain on average. The closer to 100 The smaller the cells and the larger the detail (and the longer the time to process)
     [Range(0.0001f, 15f)]
-    public float MinDistance = 5f;
+    public float MinDistance = 5f; 
     [Range(0.0001f, 5f)]
     public float CoastalRoughness = 1.0f;
-    [Range(-1, 5)]
+    [Range(-1f, 5f)]
     public int NormalizationCyles = 3;
     [Range(0.0f, 1.0f)]
     public float LakeMoisture = 0.8f;
@@ -44,9 +44,9 @@ public class MapGenerator : MonoBehaviour
     public int PATEL_Irrations = 4;
 
     [Header("HighPoint Properties")]
-    public Vector2Int NumHighPoints = new Vector2Int(1,3);
-    public Vector2Int MaxHighPointHeight = new Vector2Int(500, 2500);
-    public Vector2Int MaxHighPointWidth = new Vector2Int(500, 2500);
+    public Vector2 NumHighPoints = new Vector2(1,3);
+    public Vector2 MaxHighPointHeight = new Vector2(500, 2500);
+    public Vector2 MaxHighPointWidth = new Vector2(500, 2500);
     public Vector2 MaxElevation = new Vector2(0.6f, 1.0f);
     public Vector2 ElevationDropOff = new Vector2(0.8f, 1.8f);
 

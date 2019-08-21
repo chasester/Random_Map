@@ -52,6 +52,7 @@ public class MapGenerator : MonoBehaviour
 
     [Header("Renderer Properties")]
     //public bool Preview = true;
+    public bool ShowCells = true;
     public bool ShowEdges = true;
     public bool ShowCenters = true;
     public bool ShowCorners = false;
@@ -289,12 +290,17 @@ public class MapGenerator : MonoBehaviour
 
         //for (int i = 0; i < cells.Count; i++) if (i != cells[i].id) Debug.Log("id: " + cells[i].id + " does not match Cell " + i);
         //for (int i =0; i < corners.Count; i++)if(i != corners[i].id) Debug.Log("id: " + corners[i].id + " does not match Corner " + i);
-        #region Phase 6: Tempature Rough Run
-        {
-
+        #region Phase 5: Tempature Rough Run
+        { //this will be the way we determind rainfall plus a random factor. This is due to Rain being less posible in lower tempature climates
+            //We will probably also have rainfall influenced by normalized elevation compared to point elevation. Or posibly creating a wind map.
+            //establish a new tempature system where 0 is -20 degrees f (-28c) and 1.0f is 120 degrees f (48c)
+            for(int i =0; i < cells.Count; i++)
+            {
+                cells[i].temperature = cells[i].elevation - 1.0f;
+            }
         }
         #endregion
-        #region Phase 5: Water Sheding
+        #region Phase 6: Water Sheding
         {
             //Phase 6: Do water sheding starting at the highest points and Dropping the water down letting it go down the slops. We want to favor the side of the mountain that the wind would blow against (according to the sphereical rotation)
             //cyle 01: drop water from Highpoints (if no high points then do some guess work to make high points [well have to do this at a later point])
@@ -316,7 +322,7 @@ public class MapGenerator : MonoBehaviour
                 if (c.terrian != TerrianType.TERRIAN_LAND) continue;
                 for (int k = 0; k < 1000; k++)
                 { //basically a while loop with a option to die
-                    if (c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if (cneigh[j].ocean) break; } break; }
+                    //if (c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if (cneigh[j].ocean) break; } break; }
                     neigh = c.GetNeighbors();
                     cn = neigh[0];
                     if (Random.Range(0, 100) < 100) c.moisture += MoistureThreshold * rainpercent;
@@ -378,7 +384,9 @@ public class MapGenerator : MonoBehaviour
 
         }
         #endregion
-        //Phase 7: Normalize Moisture And create outlets of lakes to Ocean
+        #region Phase 7: Normalize Moisture And create outlets of lakes to Ocean
+
+        #endregion  
 
         //Phase 8: 
     }
@@ -530,9 +538,10 @@ public class MapGenerator : MonoBehaviour
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
-        for (int i = 0; i < (int)bounds.width; i++) for (int j = 0; j < (int)bounds.height; j++) displaymap[i, j] = Color.yellow;
+        //for (int i = 0; i < (int)bounds.width; i++) for (int j = 0; j < (int)bounds.height; j++) displaymap[i, j] = new Color(0.3f, 0.3f, 0.9f);
         Cell[] c;
         Corner[] cr;
+        if(ShowCells)
         for (int i = 0; i < edges.Count; i++)
         {
             cr = edges[i].GetCorners();
@@ -768,6 +777,7 @@ public class MapGenerator : MonoBehaviour
         List<Cell> neighbors; // cell you share one edge with
         List<Corner> corners;
         public float elevation { get; set; }
+        public float temperature { get; set; }
         public float moisture { get; set; }
 
         public Cell(Vector2 position, int index=-1)

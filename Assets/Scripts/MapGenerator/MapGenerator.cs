@@ -20,7 +20,7 @@ public class MapGenerator : MonoBehaviour
     [Range(0.0f, 1.0f)]
     public float CenterWeight;
     [Range(1, 50)]
-    public int CoastCleanIrrations = 10;
+    public int CoastCleanIrrations = 10; 
     [Range(0.01f, 50.0f)]
     public float CellPercentage = 3f; //percent of the map that cells contain on average. The closer to 100 The smaller the cells and the larger the detail (and the longer the time to process)
     [Range(0.0001f, 15f)]

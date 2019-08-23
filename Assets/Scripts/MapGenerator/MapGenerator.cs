@@ -1,9 +1,14 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System.Threading;
 
 
 public class MapGenerator : MonoBehaviour
-{
+{   
+    [Range(6,20)]
+    public int MapScale = 10;
+    public Rect Bounds = new Rect();
+    
     [Header("Random Seeds")]
     [Range(-9999, 9999)]
     public int Seed = 100;
@@ -12,7 +17,6 @@ public class MapGenerator : MonoBehaviour
     [Range(-9999, 9999)]
     public int MapSeed;
     [Header("Map Properties")]
-    public Rect Bounds = new Rect(0, 0, 200, 200);
     [Range(0.001f,1.0f)]
     public float WaterHeight = 0.2f;
     [Range(0.0f, 1.0f)]
@@ -56,21 +60,62 @@ public class MapGenerator : MonoBehaviour
     public bool ShowEdges = true;
     public bool ShowCenters = true;
     public bool ShowCorners = false;
-    
+    public string Status = "";
+
+    private Color[,] displayMap = null;
+    private Thread _t;
+    private bool hasRendered = true;
+    private System.Random random;
+
     public void Awake() //call the map when the game starts.
     {
         GenerateMap();
     }
+    public void GenerateMapToRenderTarget()
+    {
+        displayMap = null;
+        if (IsGenerating())
+        {
+            _t.Abort();
+            _t.Join();
+            this.Status = "";
+            return;
+        }
+        hasRendered = false;
+        GenerateMap(); //call this to start the threading
+    }
+    public void RenderUpdate()
+    {
+        if (displayMap == null || hasRendered) return;
+        hasRendered = true;
+        MapDisplay display = FindObjectOfType<MapDisplay>();
+        this.Status = "";
+        display.DrawColorMap(displayMap);
+    }
+    public bool IsGenerating()
+    {
+        if (_t == null) return false;
+        return _t.IsAlive;
+    }
     public void GenerateMap()
     {
-        
-        List<Cell> cells = new List<Cell>(); List<Edge> edges = new List<Edge>(); List<Corner> corners = new List<Corner>();
+       
+        _t = new Thread(_T_GenerateMap);
+        _t.Start();
+    }
+    public void _T_GenerateMap() //Threaded part of the map generator
+    {
+        this.Status = "Starting to build map";
+        Bounds = new Rect(0, 0, Mathf.Pow(2, MapScale), Mathf.Pow(2, MapScale));
         //set up random so we can save the seed back so we always can get back to were we where
         Mathf.Clamp(CellPercentage, 0.001f, 0.9f); //cap this at 90% cuz otherwise there wont be any map
-        Random.InitState(Variant);
+        this.Status = "Generated Random Points";
+        random = new System.Random(Variant);
         List<Vector2> points = generaterandompoints((uint)Mathf.RoundToInt((CellPercentage * 0.001f) * (Bounds.width * Bounds.height)), Bounds); //maybe add a random here to make it a lil more crazy
+        random = new System.Random(Seed);
+        this.Status = "Store Random Values";
 
-        Random.InitState(Seed);
+        List<Cell> cells = new List<Cell>(); List<Edge> edges = new List<Edge>(); List<Corner> corners = new List<Corner>();
         improverandompoints(ref points, LLOYD_Irrations, PATEL_Irrations, MinDistance, Bounds, ref cells, ref edges, ref corners);
 
         //Divide Land and water, then define ocean from lake, then assign coast, then assign elevation to all land modules (looking at neighbors to level out posiblities)
@@ -78,11 +123,10 @@ public class MapGenerator : MonoBehaviour
         assigncornerelevation(ref cells, ref corners, Bounds, Variant);
 
         //renderer;
-        Color[,] displaymap = drawvoronoi(cells, edges, corners, Bounds);
+        displayMap = drawvoronoi(cells, edges, corners, Bounds);
         //do disown then clear
         points.Clear(); cells.Clear(); edges.Clear(); corners.Clear(); System.GC.Collect();
-        MapDisplay display = FindObjectOfType<MapDisplay>();
-        display.DrawColorMap(displaymap);
+        this.Status = "Finalize Output...";
     }
 
     //private Color[] readymaptexture(List<Texture2D> mapTextures, Rect bounds, int mapid = -1)
@@ -99,9 +143,16 @@ public class MapGenerator : MonoBehaviour
     //    //maptex.Resize((int)bounds.width, (int)bounds.height); resizing will nullify all pixles
     //    return maptex.GetPixels();
     //}
+    private float randomRange(float min, float max)
+    {
+        //get first value and remove it then pass it in (this is cuz we cant run random on a thread);
+        return (float) (min + ((max - min) * random.NextDouble()));
+    }
 
     private void assigncornerelevation(ref List<Cell> cells, ref List<Corner> corners, Rect bounds, int perlinseed)
     {
+
+        this.Status = "Start Main Pass....";
         Corner q; Vector2 center = bounds.center;
         List<Corner> LandCorners = new List<Corner>(),//list of all the land
             LakeCorners = new List<Corner>(), //list of all the lowest land we will later make this lake (in phase 1 this is used to help build the ocean then all the remaining points are put back into the land corners) in Phase water sheding we wiull use this to make starting points for the lakes and then build rivers out of these resivors
@@ -109,7 +160,6 @@ public class MapGenerator : MonoBehaviour
             CoastCorners = new List<Corner>(), //list of all the coastal corners, these corners are also part of the land corners. This will help build our islands and help create our cool coast line using the coastal cleaning algorithm
             HighCorners = new List<Corner>(), //list of all the highest points on the map (this is where water shading will happen from.
             neighbors; //used a few times as a place holder
-        Random.State prerandom = Random.state;
         Vector2 pos; /*float maxdist = Vector2.Distance(center, bounds.min);*/
         float width = bounds.width;
         float[,] perlinheightmap = PerlinGenerator.GenerateNoise(bounds, 0.1f, (uint)perlinseed);
@@ -117,12 +167,13 @@ public class MapGenerator : MonoBehaviour
 
         float t = Mathf.Max(CenterWeight + PerlinWeight, 0.0001f); //so we dont divide by 0;
         CenterWeight /= t; PerlinWeight /= t;
-
+        
         #region Phase 1: Land Building
         {
+            this.Status = "Land Building...";
             List<Highpoint> HighPoints = new List<Highpoint>();
             {
-                int num = (int)Random.Range(Mathf.Min(NumHighPoints.x, NumHighPoints.y), Mathf.Max(NumHighPoints.x, NumHighPoints.y));
+                int num = (int)randomRange(Mathf.Min(NumHighPoints.x, NumHighPoints.y), Mathf.Max(NumHighPoints.x, NumHighPoints.y));
                 //Rect b = new Rect(100, 100, 800, 800);
                 Rect b = new Rect(bounds.xMin + bounds.width * 0.08f,
                                   bounds.yMin + bounds.height * 0.08f, //half of the average
@@ -135,15 +186,15 @@ public class MapGenerator : MonoBehaviour
                 improverandompoints(ref pt, 5, 6, MinDistance, b, ref c, ref e, ref cr);
                 for (int i = 0; i < num; i++)
                 {
-                    int index = (int)Random.Range(0, c.Count - 1);
+                    int index = (int)randomRange(0, c.Count - 1);
                     Cell cl = c[index];
                     c.RemoveAt(index); //once we grab one we want to remove it
-                    float w = Random.Range((MaxHighPointHeight.x), (MaxHighPointHeight.y)),
-                          z = Random.Range((MaxHighPointWidth.x), (MaxHighPointWidth.y)),
+                    float w = randomRange((MaxHighPointHeight.x), (MaxHighPointHeight.y)),
+                          z = randomRange((MaxHighPointWidth.x), (MaxHighPointWidth.y)),
                           x = cl.getpos().x,
                           y = cl.getpos().y,
-                          v = Random.Range(MaxElevation.x, MaxElevation.y),
-                          u = Random.Range(ElevationDropOff.x, ElevationDropOff.y);
+                          v = randomRange(MaxElevation.x, MaxElevation.y),
+                          u = randomRange(ElevationDropOff.x, ElevationDropOff.y);
                     HighPoints.Add(new Highpoint(x, y, z, w, v, u));
                 }
                 c.Clear(); e.Clear(); cr.Clear(); pt.Clear(); //double down on making sure we free the memory
@@ -165,7 +216,7 @@ public class MapGenerator : MonoBehaviour
                     continue; //when we are done we wont need to do anything else here
                 }
 
-                float elevation = (Random.Range(0.0f, 1.0f) * PerlinWeight) + (calculatefromhighpoints(HighPoints, q.getposition()) * CenterWeight);
+                float elevation = (randomRange(0.0f, 1.0f) * PerlinWeight) + (calculatefromhighpoints(HighPoints, q.getposition()) * CenterWeight);
                 if (elevation < WaterHeight)
                 {
                     neighbors = q.GetNeighbors();
@@ -173,7 +224,7 @@ public class MapGenerator : MonoBehaviour
                     for (int j = 0; j < neighbors.Count; j++) if (neighbors[j].terrian == TerrianType.TERRIAN_LAND) chance += 3; else if (neighbors[j].terrian == TerrianType.TERRIAN_LAKE) chance--; else if (neighbors[j].terrian == TerrianType.TERRIAN_OCEAN) chance++; //add a chance that land will clump a lil
 
                     //this will be water
-                    if (Random.Range(0, 100 * chance) * 0.01f < 1.5f) //maybe bring this back 
+                    if (randomRange(0, 100 * chance) * 0.01f < 1.5f) //maybe bring this back 
                     {
                         q.SetTerrianProperties(0.0f, 1.0f, TerrianType.TERRIAN_LAKE); //we may change this to give it a lil evelation varience but for now lets leave it alone
                         LakeCorners.Add(q); //we dont know if this is a lake or not but we will determind that after we calculate all the corners
@@ -186,7 +237,7 @@ public class MapGenerator : MonoBehaviour
                     //continue;
                 }
                 //so this must be land so lets calculate some pregenerated moisture ideals
-                float moisture = 0.0f;//(perlinmoisturemap[(int)pos.x, (int)pos.y] * 0.2f) + (Random.Range(0.0f, tex[(int)(width * pos.y + pos.x)].r)) * 0.5f + ((1.0f - (Mathf.Abs(pos.y - center.y) / bounds.width)) * 0.3f);
+                float moisture = 0.0f;//(perlinmoisturemap[(int)pos.x, (int)pos.y] * 0.2f) + (randomRange(0.0f, tex[(int)(width * pos.y + pos.x)].r)) * 0.5f + ((1.0f - (Mathf.Abs(pos.y - center.y) / bounds.width)) * 0.3f);
                 q.SetTerrianProperties(elevation, moisture, TerrianType.TERRIAN_LAND);
                 LandCorners.Add(q);
 
@@ -195,6 +246,7 @@ public class MapGenerator : MonoBehaviour
         #endregion
         #region Phase 2: Coast Cleanup
         {
+            this.Status = "Coastal Cleanup...";
             //phase 2: we need to now find our map edge corners (conviently placed in the oceans terrain) then cycle through there neighbors till we get to corners marked as land. We will change each of these corners from lake to ocean and move them from the Lake list to the ocean list.
             //this will be similar to a b* algorithm were we will follow a branch til we have reach a dead end then we will go to the next branch
             List<Corner> que = new List<Corner>(OceanCorners.Count); //see up this cuz we are gonna copy it in a sec
@@ -215,6 +267,7 @@ public class MapGenerator : MonoBehaviour
         #endregion
         #region Phase 3: Normalization
         {
+            this.Status = "Normalize Terrain...";
             //Phase 3: We want to run a normalization
             for (int i = 0; i < cells.Count; i++) //first cycle assign the average for all the corners to the center(aka the cell)
             {
@@ -230,8 +283,8 @@ public class MapGenerator : MonoBehaviour
                     if (cr[j].terrian != TerrianType.TERRIAN_COAST) isocean = false;
                     if (!hascoast) hascoast = cr[j].terrian == TerrianType.TERRIAN_COAST; //does it contain a coast
 
-                    eavg += cr[j].elevation;//*Random.Range(0.6f, 1.2f)*(cr[j].terrian == TerrianType.TERRIAN_COAST ? 0.5f:1.0f);
-                    etotal += 1.0f;//*Random.Range(0.8f, 1.2f);
+                    eavg += cr[j].elevation;//*randomRange(0.6f, 1.2f)*(cr[j].terrian == TerrianType.TERRIAN_COAST ? 0.5f:1.0f);
+                    etotal += 1.0f;//*randomRange(0.8f, 1.2f);
                 }
                 if (hasocean && hascoast) c.coast = true;
                 if (isocean && !hascoast)
@@ -291,9 +344,11 @@ public class MapGenerator : MonoBehaviour
         //for (int i = 0; i < cells.Count; i++) if (i != cells[i].id) Debug.Log("id: " + cells[i].id + " does not match Cell " + i);
         //for (int i =0; i < corners.Count; i++)if(i != corners[i].id) Debug.Log("id: " + corners[i].id + " does not match Corner " + i);
         #region Phase 5: Tempature Rough Run
+        this.Status = "Tempature Run...";
         { //this will be the way we determind rainfall plus a random factor. This is due to Rain being less posible in lower tempature climates
             //We will probably also have rainfall influenced by normalized elevation compared to point elevation. Or posibly creating a wind map.
             //establish a new tempature system where 0 is -20 degrees f (-28c) and 1.0f is 120 degrees f (48c)
+            this.Status = "Coastal Cleanup...";
             for(int i =0; i < cells.Count; i++)
             {
                 cells[i].temperature = cells[i].elevation - 1.0f;
@@ -302,6 +357,7 @@ public class MapGenerator : MonoBehaviour
         #endregion
         #region Phase 6: Water Sheding
         {
+            this.Status = "Water Sheding...";
             //Phase 6: Do water sheding starting at the highest points and Dropping the water down letting it go down the slops. We want to favor the side of the mountain that the wind would blow against (according to the sphereical rotation)
             //cyle 01: drop water from Highpoints (if no high points then do some guess work to make high points [well have to do this at a later point])
             //List<int> Waypoints = new List<int>(corners.Count);
@@ -316,7 +372,7 @@ public class MapGenerator : MonoBehaviour
 
             for (int i = 0; i < corners.Count; i++)
             {
-                rainpercent = Random.Range(0, 100 * RainFallAverage) / 100;
+                rainpercent = randomRange(0, 100 * RainFallAverage) / 100;
                 wc = null;
                 c = corners[i];
                 if (c.terrian != TerrianType.TERRIAN_LAND) continue;
@@ -325,7 +381,7 @@ public class MapGenerator : MonoBehaviour
                     //if (c.terrian == TerrianType.TERRIAN_OCEAN) { cneigh = c.GetCellNeighbors(); for (int j = 0; j < cneigh.Count; j++) if (cneigh[j].ocean || cneigh[j].coast) { wc = cneigh[j]; if (cneigh[j].ocean) break; } break; }
                     neigh = c.GetNeighbors();
                     cn = neigh[0];
-                    if (Random.Range(0, 100) < 100) c.moisture += MoistureThreshold * rainpercent;
+                    if (randomRange(0, 100) < 100) c.moisture += MoistureThreshold * rainpercent;
                     //if (Waypoints[cn.id] != -1) { wc = cells[Waypoints[cn.id]]; break; }
 
                     for (int j = 1; j < neigh.Count; j++) //find the lowest elevation
@@ -385,7 +441,7 @@ public class MapGenerator : MonoBehaviour
         }
         #endregion
         #region Phase 7: Normalize Moisture And create outlets of lakes to Ocean
-
+        this.Status = "Lakes and Rivers...";
         #endregion  
 
         //Phase 8: 
@@ -416,7 +472,7 @@ public class MapGenerator : MonoBehaviour
         {
             Vector2 pos = highPoints[i].pos;
             dist = Vector2.Distance(pos, point);
-            if ( dist < leastdist && Random.Range(0, 5) >= CoastalRoughness)
+            if ( dist < leastdist && randomRange(0, 5) >= CoastalRoughness)
             {
                 leastdist = dist;  
                 index = i;
@@ -424,9 +480,9 @@ public class MapGenerator : MonoBehaviour
         }
         if(index < 0) return 0.0f;
         float avg = 0.0f;
-        for (int i = 0; i < Random.Range(1, 1); i++)
+        for (int i = 0; i < 1/*randomRange(1, 1)*/; i++)
         {
-            Vector2 df = new Vector2((highPoints[index].size.x * Random.Range(0.7f, 1.4f)), (highPoints[index].size.y * Random.Range(0.7f, 1.4f)));
+            Vector2 df = new Vector2((highPoints[index].size.x * randomRange(0.7f, 1.4f)), (highPoints[index].size.y * randomRange(0.7f, 1.4f)));
             Vector2 ds = (point - highPoints[index].pos), norm = ds; norm.Normalize(); norm *= df;
             float mdist = Vector2.Distance(norm, ds);
             avg = (avg + (1 - Mathf.Clamp01(Mathf.Pow(Mathf.Abs(leastdist / mdist), highPoints[index].dispation))) * highPoints[index].elevation);
@@ -484,8 +540,8 @@ public class MapGenerator : MonoBehaviour
     {
         List<Vector2> points = new List<Vector2>();
         for (int i = 0; i < NumPoints; i++)
-            points.Add(new Vector2(Mathf.Round(Random.Range(bounds.xMin + bounds.size.x * 0.01f , bounds.xMax - bounds.size.x * 0.01f)),
-                Mathf.Round(Random.Range(bounds.yMin + bounds.size.y * 0.01f, bounds.yMax - bounds.size.y * 0.01f)))); // we add a 1% boarder + 10 units so that we dont get any points to close to the edge
+            points.Add(new Vector2(Mathf.Round(randomRange(bounds.xMin + bounds.size.x * 0.01f , bounds.xMax - bounds.size.x * 0.01f)),
+                Mathf.Round(randomRange(bounds.yMin + bounds.size.y * 0.01f, bounds.yMax - bounds.size.y * 0.01f)))); // we add a 1% boarder + 10 units so that we dont get any points to close to the edge
         return points;
     }
     private void drawline(ref Color[,] displaymap, Vector2 to, Vector2 from, Color c)
@@ -537,8 +593,9 @@ public class MapGenerator : MonoBehaviour
     }
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
+        this.Status = "Draw Pretty Things...";
         Color[,] displaymap = new Color[(int)bounds.width, (int)bounds.height];
-        //for (int i = 0; i < (int)bounds.width; i++) for (int j = 0; j < (int)bounds.height; j++) displaymap[i, j] = new Color(0.3f, 0.3f, 0.9f);
+        for (int i = 0; i < (int)bounds.width; i++) for (int j = 0; j < (int)bounds.height; j++) displaymap[i, j] = new Color(0.3f, 0.3f, 0.9f);
         Cell[] c;
         Corner[] cr;
         if(ShowCells)
@@ -614,6 +671,7 @@ public class MapGenerator : MonoBehaviour
             bruteforceremove(ref points, ref cells, mindistance);
             for (int i = 0; i < lloyd_irrations; i++)
             {
+                this.Status = "LLoyd Irration " + (1+i).ToString() + " / " + LLOYD_Irrations.ToString();
                 ge = v.generateVoronoi(points, bounds);
                 cells = createcells(ge, points, ref edges, ref corners);
                 for (int k = 0; k < cells.Count; k++)
@@ -636,7 +694,7 @@ public class MapGenerator : MonoBehaviour
                 v.reset();
                 System.GC.Collect();
                 //rememer all we are changing is points so everything needs removed so gc can remove the unnessary info
-               
+
             }
             v.reset();
             
@@ -648,6 +706,7 @@ public class MapGenerator : MonoBehaviour
         Corner q; Vector2 p1; List<Cell> cellneighbors;
         for (int k = 0; k < patel_irrations; k++)   
         {
+            this.Status = "Patel Irration " + (k+1).ToString() + " / " + patel_irrations.ToString();
             for (int i = 0; i < corners.Count; i++)
             {
                 q = corners[i];
@@ -662,6 +721,7 @@ public class MapGenerator : MonoBehaviour
                 newcorners[i] = p1;
             }
             for (int i = 0; i < newcorners.GetLength(0); i++) corners[i].SetPosition(newcorners[i]); // now we assign the points
+            
         }
         //phase 3: create edge lines
         //List<Corner> corns;

@@ -8,7 +8,8 @@ using System.Diagnostics;
 public class MapGeneratorEditor : Editor
 {
     Stopwatch sp = new System.Diagnostics.Stopwatch();
-    long LastTimeElapsed = 0;
+    private long LastTimeElapsed = 0;
+    private bool startRender = false;
     private void roundVector2ToInt(ref Vector2 vec)
     {
         vec.x = Mathf.RoundToInt(vec.x);
@@ -25,10 +26,21 @@ public class MapGeneratorEditor : Editor
     public override void OnInspectorGUI()
     {
         MapGenerator mapgen = (MapGenerator)target;
+        startRender = mapgen.IsGenerating();
+        mapgen.RenderUpdate();
+        if (sp.IsRunning) LastTimeElapsed = sp.ElapsedMilliseconds;
+
+        if (!startRender && sp.IsRunning)
+        {
+            sp.Stop();
+            sp.Reset();
+        }
+
+        
         this.roundVector2ToInt(ref mapgen.NumHighPoints);
         this.roundVector2ToInt(ref mapgen.MaxHighPointHeight);
         this.roundVector2ToInt(ref mapgen.MaxHighPointWidth);
-
+        
         //if (DrawDefaultInspector())
         {
             float t = Mathf.Max(mapgen.CenterWeight + mapgen.PerlinWeight, 0.0001f);
@@ -36,6 +48,11 @@ public class MapGeneratorEditor : Editor
         }
 
         EditorGUILayout.BeginVertical(/*GUILayout.MaxHeight(1000f)*/); //set this max hieght due to bug when editing this, buttons become unclickable until restart
+        #region Map Bounds
+        EditorGUILayout.LabelField("Map Bounds", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("  Map Size (2^n)");
+        mapgen.MapScale = EditorGUILayout.IntSlider(mapgen.MapScale, 6, 20);
+        #endregion
 
         #region Random Seeds
         EditorGUILayout.LabelField("Random Seeds", EditorStyles.boldLabel);
@@ -122,12 +139,12 @@ public class MapGeneratorEditor : Editor
         #region Render Props
         EditorGUILayout.LabelField("Renderer Properties:", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.Toggle("  Show Cells", mapgen.ShowCells);
-        EditorGUILayout.Toggle("Show Edges", mapgen.ShowEdges);
+        mapgen.ShowCells = EditorGUILayout.Toggle("  Show Cells", mapgen.ShowCells);
+        mapgen.ShowEdges = EditorGUILayout.Toggle("Show Edges", mapgen.ShowEdges);
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.Toggle("  Show Centers", mapgen.ShowCenters);
-        EditorGUILayout.Toggle("Show Corners", mapgen.ShowCorners);
+        mapgen.ShowCenters = EditorGUILayout.Toggle("  Show Centers", mapgen.ShowCenters);
+        mapgen.ShowCorners = EditorGUILayout.Toggle("Show Corners", mapgen.ShowCorners);
         EditorGUILayout.EndHorizontal();
         #endregion
 
@@ -136,28 +153,35 @@ public class MapGeneratorEditor : Editor
         this.GuiLine();
         EditorGUILayout.Space();
         EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("Generate"))
+        if (!mapgen.IsGenerating())
         {
-            sp.Start();
-            mapgen.GenerateMap();
-            sp.Stop();
-            LastTimeElapsed = sp.ElapsedMilliseconds; sp.Reset();
-        }
+            if (GUILayout.Button("Generate"))
+            {
+                sp.Start();
+                mapgen.GenerateMapToRenderTarget();
+            }
 
-        if(GUILayout.Button("Randomize"))
+            if (GUILayout.Button("Randomize"))
+            {
+                sp.Start();
+                this.startRender = true;
+                mapgen.Seed = Random.Range(99999, -99999);
+                mapgen.Variant = Random.Range(99999, -99999);
+                mapgen.MapSeed = Random.Range(99999, -99999);
+                mapgen.GenerateMapToRenderTarget();
+            }
+        } else
         {
-            sp.Start();
-            mapgen.Seed    = Random.Range(99999, -99999);
-            mapgen.Variant = Random.Range(99999, -99999);
-            mapgen.MapSeed = Random.Range(99999, -99999);
-            mapgen.GenerateMap();
-            sp.Stop();
-            LastTimeElapsed = sp.ElapsedMilliseconds; sp.Reset();
+            if(GUILayout.Button("Abort"))
+            {
+                mapgen.GenerateMapToRenderTarget();
+            }
         }
         EditorGUILayout.EndHorizontal();
         #endregion
 
-        if (LastTimeElapsed >= 1) GUILayout.Label("Time Elaspe: " + LastTimeElapsed / 1000 + " secs");
+        if(mapgen.Status != "") GUILayout.Label(mapgen.Status);
+        if (LastTimeElapsed >= 100) GUILayout.Label("Time Elaspe: " + LastTimeElapsed / 1000 + " secs");
         EditorGUILayout.EndVertical();
 
     }

@@ -122,12 +122,12 @@ public class MapGeneratorEditor : Editor
         #region Render Props
         EditorGUILayout.LabelField("Renderer Properties:", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.Toggle("  Show Cells", mapgen.ShowCells);
-        EditorGUILayout.Toggle("Show Edges", mapgen.ShowEdges);
+        mapgen.ShowCells = EditorGUILayout.Toggle("  Show Cells", mapgen.ShowCells);
+        mapgen.ShowEdges = EditorGUILayout.Toggle("  Show Edges", mapgen.ShowEdges);
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.Toggle("  Show Centers", mapgen.ShowCenters);
-        EditorGUILayout.Toggle("Show Corners", mapgen.ShowCorners);
+        mapgen.ShowCenters = EditorGUILayout.Toggle("  Show Centers", mapgen.ShowCenters);
+        mapgen.ShowCorners = EditorGUILayout.Toggle("  Show Corners", mapgen.ShowCorners);
         EditorGUILayout.EndHorizontal();
         #endregion
 

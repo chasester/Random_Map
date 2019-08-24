@@ -59,7 +59,7 @@ public class MapGenerator : MonoBehaviour
     
     public void Awake() //call the map when the game starts.
     {
-        GenerateMap();
+        //GenerateMap();
     }
     public void GenerateMap()
     {

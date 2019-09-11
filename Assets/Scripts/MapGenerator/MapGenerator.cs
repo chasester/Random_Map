@@ -518,6 +518,11 @@ public class MapGenerator : MonoBehaviour
         //        y0 += sy;
         //    }
         //}
+        if(to.x < from.x) { Vector2 a = to; to = from; from = a; }
+
+         to = new Vector2(Mathf.Ceil(to.x)+1, Mathf.Round(to.y));
+         from = new Vector2(Mathf.Floor(from.x)-1, Mathf.Round(from.y));
+
         float xPix = Mathf.Round(to.x);
         float yPix = Mathf.Round(to.y);
         float width = (float)from.x - (float)to.x;
@@ -527,13 +532,22 @@ public class MapGenerator : MonoBehaviour
         int intLength = (int)(length);
         float dx = width / (float)length;
         float dy = height / (float)length;
+       //while(dx >= 1f || dy >= 1f) { dx *= 0.5f; dy *= 0.5f; intLength *= 2; } //make sure we dont step more than one pixel
+      // c = new Color(Random.Range(0.2f, 1f), Random.Range(0.2f, 1f), Random.Range(0.2f, 1f)); 
         for (int u = 0; u <= intLength; u++)
         {
-            if ((xPix) < Bounds.width && (yPix) < Bounds.height && xPix >= 0 && yPix >= 0)
-                displaymap[(int)xPix, (int)yPix] = c;
+            if (Mathf.CeilToInt(xPix) < Bounds.width && Mathf.CeilToInt(yPix) < Bounds.height && Mathf.FloorToInt(xPix) >= 0 && Mathf.FloorToInt(yPix) >= 0)
+            {
+                displaymap[Mathf.FloorToInt(xPix), Mathf.FloorToInt(yPix)] = c;
+                displaymap[Mathf.CeilToInt(xPix), Mathf.CeilToInt(yPix)] = c;
+            }
             xPix += dx;
             yPix += dy;
         }
+        //if ((to.x) < Bounds.width && (to.y) < Bounds.height && to.x >= 0 && to.y >= 0)
+        //    displaymap[Mathf.FloorToInt(to.x), Mathf.FloorToInt(to.y)] = new Color(1, 1, 0);
+        //if ((from.x) < Bounds.width && (from.y) < Bounds.height && from.x >= 0 && from.y >= 0)
+        //    displaymap[Mathf.CeilToInt(from.x), Mathf.CeilToInt(from.y)] = new Color(1, 1, 0);
     }
     private Color[,] drawvoronoi(List<Cell> cells, List<Edge> edges, List<Corner> corners, Rect bounds)
     {
@@ -548,10 +562,10 @@ public class MapGenerator : MonoBehaviour
             c = edges[i].getcells();
             for (int j = 0; j < 2; j++)
             {
-                Color cl = /*new Color(Random.Range(0.2f, 1f), Random.Range(0.2f, 1f), Random.Range(0.2f, 1f));*/
-                    c[j].coast ? new Color(0.7f, 0.9f, 0.3f) : c[j].ocean ? new Color(0.3f, 0.3f, 0.9f) : new Color(0.3f, c[j].elevation, c[j].moisture);
-                drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
-                drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
+                Color cl = /*new Color(Random.Range(1f, 1f), Random.Range(1f, 1f), Random.Range(1f, 1f));*/
+                           /*c[j].coast ? new Color(0.7f, 0.9f, 0.3f) :*/ c[j].ocean ? new Color(0.3f, 0.3f, 0.9f) : new Color(c[j].temperature, c[j].elevation - this.WaterHeight, c[j].moisture);
+                    //drawline(ref displaymap, c[j].getpos(), cr[0].getposition(), cl);
+                    drawline(ref displaymap, c[j].getpos(), cr[1].getposition(), cl);
                 drawtriangle(ref displaymap, cr[0].getposition(), cr[1].getposition(), c[j].getpos(), cl);
             }
 

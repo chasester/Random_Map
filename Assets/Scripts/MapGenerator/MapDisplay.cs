@@ -37,11 +37,11 @@ public class MapDisplay : MonoBehaviour {
         texture.Apply();
 
         TextureRenerer.sharedMaterial.mainTexture = texture;
-        TextureRenerer.transform.localScale = new Vector3(width, height, 1);
+        TextureRenerer.transform.localScale = new Vector3(texture.width, 1, texture.height);
     }
     public void DrawColorMap(Texture2D tex)
     {
         TextureRenerer.sharedMaterial.mainTexture = tex;
-        TextureRenerer.transform.localScale = new Vector3(tex.width, tex.height, 1);
+        TextureRenerer.transform.localScale = new Vector3(tex.width, 1, tex.height);
     }
 }

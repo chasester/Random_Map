@@ -58,14 +58,10 @@
      <Compile Include="Assets\GameControl.cs" />
      <Compile Include="Assets\PlayerPrefab.cs" />
      <Compile Include="Assets\Scripts\Game\CameraControl.cs" />
-     <Compile Include="Assets\Scripts\Game\PlayerPrefab.cs" />
-     <Compile Include="Assets\Scripts\MapGenerator\BinaryHeap.cs" />
      <Compile Include="Assets\Scripts\MapGenerator\MapDisplay.cs" />
      <Compile Include="Assets\Scripts\MapGenerator\MapGenerator.cs" />
-     <Compile Include="Assets\Scripts\Utls\DrawShape.cs" />
+     <Compile Include="Assets\Scripts\MapGenerator\NewBehaviourScript.cs" />
      <Compile Include="Assets\Scripts\Utls\PerlinGenerator.cs" />
-     <Compile Include="Assets\Scripts\Utls\spriteCreator.cs" />
-     <Compile Include="Assets\Scripts\Utls\Triangle.cs" />
      <Compile Include="Assets\Scripts\Utls\Voronoi.cs" />
      <Compile Include="Assets\Scripts\Utls\VoronoiEssenials.cs" />
      <Compile Include="Assets\WorldCell.cs" />
